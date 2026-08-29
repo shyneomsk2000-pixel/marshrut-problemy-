@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
-<meta name="app-version" content="2026.08.29-1">
+<meta name="app-version" content="2026.08.29-2">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -37,6 +37,7 @@ header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:13px 
 .brand{display:flex;flex-direction:column;line-height:1.15}
 .brand b{font-family:"Unbounded",sans-serif;font-size:15px}
 .brand span{font-size:11px;color:var(--ink-2);letter-spacing:.06em;text-transform:uppercase}
+.brand .ver{font-size:10px;letter-spacing:0;text-transform:none;color:var(--ink-2);opacity:.85}
 .tabs{display:flex;gap:4px;background:var(--paper);padding:3px;border-radius:8px;border:1px solid var(--line)}
 .tabs button{border:0;background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px}
 .tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
@@ -235,7 +236,8 @@ td.num{width:34px;font-family:"JetBrains Mono",monospace;color:var(--ink-2)}
 <body>
 
 <header class="top">
-  <div class="brand" id="brand"><b>Маршрут проблемы</b><span>Отдел разработки 1С</span></div>
+  <div class="brand" id="brand"><b>Маршрут проблемы</b><span>Отдел разработки 1С</span>
+    <span class="ver mono" id="brandVer"></span></div>
   <div class="tabs" role="tablist">
     <button role="tab" aria-selected="true" data-view="board">Доска</button>
     <button role="tab" aria-selected="false" data-view="routes">Настройки</button>
@@ -271,7 +273,7 @@ td.num{width:34px;font-family:"JetBrains Mono",monospace;color:var(--ink-2)}
 
 /* Версия сборки: видна в подсказке к названию, в настройках и в журнале —
    по ней сразу понятно, какую версию отдал хостинг после деплоя. */
-const APP_VERSION='2026.08.29-1';
+const APP_VERSION='2026.08.29-2';
 
 const CONFIG = {
   storage:'xmlid',                // 'xmlid' — метка в XML_ID (поля TAGS у задач нет), 'uf' — свои поля
@@ -709,6 +711,18 @@ const BX = {
     console.log('[задачи] страниц:',pages,'получено:',all.length,'всего по порталу:',total, label||'');
     return all;
   },
+  /* Подзадачи заявок по списку родителей: нужны, когда доска отобрана по спринту —
+     в спринте стоит часть подзадач, а маршрут и проценты считаются по всем. */
+  async loadChildren(parentIds){
+    const out=[], ids=[...new Set((parentIds||[]).map(String))].filter(v=>v&&v!=='0');
+    for(let i=0;i<ids.length && i<200;i+=50){
+      const part=ids.slice(i,i+50);
+      try{ (await this.loadTasks({PARENT_ID:part}, 'подзадачи заявок')).forEach(x=>out.push(x)); }
+      catch(e){ Log.add('probe','Фильтр PARENT_ID списком не принят: '+e.message); break; }
+    }
+    return out;
+  },
+
   /* Подзадача должна попасть в тот же проект и спринт, иначе на скрам-доске её не видно.
      SPRINT_ID и GROUP_ID принимает не каждый портал — при отказе повторяем без них. */
   async addSubtask(parentId, title, responsibleId, estimateH, stage, cat, groupId, sprintId){
@@ -1255,7 +1269,9 @@ function filtered(){
   return state.problems.filter(pr=>{
     const okQ=!state.q||(pr.title+' '+pr.id).toLowerCase().includes(state.q.toLowerCase());
     const okU=!state.user||pr.subs.some(s=>s.who===state.user);
-    const okG=!state.group||String(pr.groupId||'')===String(state.group);
+    /* при выбранном спринте проект не отсеиваем: спринт читается целиком, даже если часть
+       его задач лежит в другой группе — иначе они загружены, но не показаны */
+    const okG=!state.group||(state.sprint&&state.sprint!=='__backlog')||String(pr.groupId||'')===String(state.group);
     const okS=!state.sprint||inSprint(pr,state.sprint);
     return okQ&&okU&&okG&&okS;
   });
@@ -2789,8 +2805,12 @@ $('#fProject').addEventListener('change',async e=>{
 $('#fSprint').addEventListener('change',async e=>{
   state.sprint=e.target.value; Prefs.write();
   Log.add('filter','Выбран спринт: '+(state.sprint?(state.sprint==='__backlog'?'бэклог':sprintName(state.sprint)):'все спринты'));
-  if(BX.ready && state.sprint && state.sprint!=='__backlog'){
-    try{ await loadPortal(); fillUsers(); }catch(err){ Log.add('error','Догрузка по спринту не удалась: '+err.message); }
+  /* Спринт теперь задаётся запросом к порталу, а не отсевом на клиенте, поэтому перечитываем
+     задачи при любой смене — и когда спринт выбрали, и когда вернулись ко «Всем спринтам». */
+  if(BX.ready){
+    $('#mode').textContent='загрузка отбора…';
+    try{ await loadPortal(); fillUsers(); }
+    catch(err){ Log.add('error','Загрузка по спринту не удалась: '+err.message); toast('Битрикс24: '+err.message); }
   }
   state.view='board'; render();
 });
@@ -2879,7 +2899,15 @@ async function loadPortal(){
   const t0=Date.now();
   if(!Progress.on) Progress.start('Загрузка задач портала');
   const gFilter={}; if(state.group) gFilter.GROUP_ID=Number(state.group);
-  Progress.step('Запрашиваю задачи: '+(state.group?projectName(state.group):'все проекты'));
+  /* Если спринт выбран — читаем ЕГО, а не весь проект: раньше приложение забирало все задачи
+     проекта (все спринты и бэклог, до сорока страниц) и только потом отсеивало лишние на клиенте. */
+  const onSprint = !!(state.sprint && state.sprint!=='__backlog');
+  const mainFilter = onSprint ? {SPRINT_ID:Number(state.sprint)} : gFilter;
+  const mainLabel  = onSprint ? ('спринт '+sprintName(state.sprint))
+                              : (state.group?('проект '+state.group):'все проекты');
+  Progress.step(onSprint
+    ? ('Запрашиваю задачи спринта «'+sprintName(state.sprint)+'» — весь проект не читаем')
+    : ('Запрашиваю задачи: '+(state.group?projectName(state.group):'все проекты')));
 
   /* спринты запрашиваем параллельно с задачами и кэшируем: повторный вход в проект их не перезапрашивает */
   state.sprintsFor=state.sprintsFor||{};
@@ -2901,7 +2929,7 @@ async function loadPortal(){
 
   if(needSprints) Progress.step('Параллельно запрашиваю спринты проекта');
   const [raw0] = await Promise.all([
-    BX.loadTasks(gFilter, state.group?('проект '+state.group):'все проекты', paintEarly),
+    BX.loadTasks(mainFilter, mainLabel, paintEarly),
     sprintsPromise.then(list=>{
       if(list){
         state.sprints=state.sprints.filter(s=>String(s.groupId)!==String(state.group)).concat(list);
@@ -2916,18 +2944,6 @@ async function loadPortal(){
   const loadMain=BX.lastLoad||{};
   Progress.step('Задачи получены: '+raw.length+' шт., страниц '+(loadMain.pages||1));
 
-  /* добор по спринту: задача может лежать вне выбранного проекта или не поместиться в выборку */
-  let addedBySprint=0;
-  if(state.sprint && state.sprint!=='__backlog'){
-    Progress.step('Добираю задачи выбранного спринта');
-    try{
-      const bySprint=await BX.loadTasks({SPRINT_ID:Number(state.sprint)}, 'спринт '+state.sprint);
-      const have=new Set(raw.map(x=>String(x.id)));
-      bySprint.forEach(x=>{ if(!have.has(String(x.id))){ raw.push(x); have.add(String(x.id)); addedBySprint++; } });
-      Log.add('load','Добор по спринту: найдено '+bySprint.length+', добавлено новых '+addedBySprint,
-              {'ID спринта':state.sprint});
-    }catch(e){ Log.add('error','Добор по спринту не удался: '+e.message); }
-  }
 
   /* родители задач-сирот: тянем их отдельно, чтобы подзадачи встали в свои заявки */
   const known=new Set(raw.map(x=>String(x.id)));
@@ -2949,6 +2965,22 @@ async function loadPortal(){
     }
     par.forEach(x=>{ if(!known.has(String(x.id))){ raw.push(x); known.add(String(x.id)); } });
     Log.add('load','Догружены родители сирот: запрошено '+missingParents.length+', получено '+par.length);
+  }
+
+  /* Отбор по спринту: в спринте лежит часть подзадач, а маршрут заявки, проценты и сумма
+     сторипоинтов считаются по всем её подзадачам — догружаем их по списку родителей. */
+  let addedKids=0;
+  if(onSprint){
+    const have=new Set(raw.map(x=>String(x.id)));
+    const parentIds=[...new Set(raw.filter(x=>BX.num(x.parentId)===0).map(x=>String(x.id)))];
+    if(parentIds.length){
+      Progress.step('Догружаю подзадачи заявок спринта: заявок '+parentIds.length);
+      try{
+        const kids=await BX.loadChildren(parentIds);
+        kids.forEach(x=>{ if(!have.has(String(x.id))){ raw.push(x); have.add(String(x.id)); addedKids++; } });
+        Log.add('load','Догружены подзадачи заявок спринта: получено '+kids.length+', новых '+addedKids);
+      }catch(e){ Log.add('error','Подзадачи заявок догрузить не удалось: '+e.message); }
+    }
   }
 
   Progress.step('Собираю заявки и подзадачи из '+raw.length+' задач');
@@ -2997,10 +3029,13 @@ async function loadPortal(){
   state.problems.forEach(p=>{ const k=p.sprintId||'бэклог'; bySprintCount[k]=(bySprintCount[k]||0)+1; });
   Log.add('load','Загружены задачи портала: '+state.problems.length+' заявок, '
     +state.problems.reduce((a,p)=>a+p.subs.length,0)+' подзадач',
-    {проект:state.group?projectName(state.group):'все', сотрудников:state.users.length,
-     'сырых задач':raw.length, 'получено по проекту':loadMain.got,
+    {проект:state.group?projectName(state.group):'все',
+     'основной отбор':onSprint?('спринт '+sprintName(state.sprint)):'проект целиком',
+     сотрудников:state.users.length,
+     'сырых задач':raw.length, 'получено основным запросом':loadMain.got,
+     'догружено подзадач':addedKids,
      'портал сообщает всего':loadMain.total==null?'—':loadMain.total,
-     страниц:loadMain.pages, 'добрано по спринту':addedBySprint,
+     страниц:loadMain.pages,
      'сирот поднято':orphans, 'со спринтом':state.problems.filter(p=>p.sprintId).length});
   Log.add('load','Раскладка по спринтам: '+Object.entries(bySprintCount)
     .map(([k,v])=>(k==='бэклог'?k:sprintName(k))+': '+v).join(', '));
@@ -3031,6 +3066,8 @@ function boot(){
   Log.load();
   const b=document.getElementById('brand');
   if(b) b.title='Версия сборки '+APP_VERSION;
+  const bv=document.getElementById('brandVer');
+  if(bv) bv.textContent='версия '+APP_VERSION;
   Log.add('load','Приложение открыто, версия сборки '+APP_VERSION);
 
   /* мгновенно показываем интерфейс: проекты из кэша, доска с индикатором загрузки */

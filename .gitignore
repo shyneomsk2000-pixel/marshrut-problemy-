@@ -7,3 +7,5 @@ index.backup.html
 # уберите эти две строки, если хотите держать документацию там же
 README.md
 DEPLOY.md
+
+.github/
