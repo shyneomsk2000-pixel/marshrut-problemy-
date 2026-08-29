@@ -1,0 +1,3111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Маршрут проблемы — отдел разработки 1С</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta name="app-version" content="2026.08.29-1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F7F4EC; --card:#FFFDF7; --ink:#1E1B16; --ink-2:#5C5648; --line:#DCD5C3;
+  --rose:#F2C4C9; --rose-deep:#C4626C; --mustard:#F6E28E; --mustard-deep:#9A7C31;
+  --ok:#3F7A57; --warn:#B8801F; --alert:#C0453B; --blue:#3E6E9E;
+  --headw:290px; --colw:196px;
+  --laneh:96px; --headh:none;              /* высота строки заявки и карточки заявки */
+  --card-fs:12px; --card-ff:inherit;       /* размер и семейство шрифта карточек */
+  --c-new:#FFFDF7;  --c-new-b:#D2CCBB;
+  --c-work:#FCF1BE;  --c-work-b:#CEC59B;
+  --c-done:#E2F0DD;  --c-done-b:#B9C5B4;
+  --shadow:0 1px 0 rgba(30,27,22,.06), 0 8px 20px -16px rgba(30,27,22,.45);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Golos Text","Segoe UI",Roboto,Arial,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:"Unbounded","Golos Text",sans-serif;font-weight:600;letter-spacing:-.01em}
+.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+
+/* ---------- шапка ---------- */
+header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:13px 20px;
+  background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40}
+.brand{display:flex;flex-direction:column;line-height:1.15}
+.brand b{font-family:"Unbounded",sans-serif;font-size:15px}
+.brand span{font-size:11px;color:var(--ink-2);letter-spacing:.06em;text-transform:uppercase}
+.tabs{display:flex;gap:4px;background:var(--paper);padding:3px;border-radius:8px;border:1px solid var(--line)}
+.tabs button{border:0;background:transparent;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+.grow{flex:1}
+.f-input{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 10px;font:inherit;min-width:170px}
+.btn{border:1px solid var(--ink);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.small{padding:4px 9px;font-size:12px;border-radius:7px}
+.badge-mode{font-size:11px;padding:4px 8px;border-radius:999px;border:1px dashed var(--line);color:var(--ink-2)}
+
+/* ---------- матрица ---------- */
+/* Доска — собственная область прокрутки: только так шапка колонок может липнуть сверху.
+   Раньше overflow-x:auto делал .matrix прокруткой и по вертикали, страница скроллилась мимо,
+   и position:sticky у шапки ни к чему не прилипал. */
+.matrix{overflow:auto;padding-bottom:40px}
+.mrow{display:grid;grid-template-columns:var(--headw) repeat(6,minmax(var(--colw),1fr));
+      min-width:calc(var(--headw) + 6*var(--colw))}
+.cell{padding:0 6px}
+.stick{position:sticky;left:0;z-index:12;background:var(--paper);border-right:1px solid var(--line)}
+
+.mhead{position:sticky;top:0;z-index:30;background:var(--paper);box-shadow:0 1px 0 var(--line),0 6px 12px -10px rgba(30,27,22,.5)}
+.mhead .stick{background:var(--paper);z-index:32}
+.mhead .cell{padding:10px 12px;border-right:1px solid var(--line)}
+.mhead .cell:last-child{border-right:0}
+.sh{display:flex;gap:8px;align-items:baseline}
+.step-no{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;width:20px;height:20px;flex:0 0 20px;
+  border-radius:50%;border:1px solid var(--ink);display:grid;place-items:center}
+.sh h3{margin:0;font-size:13px;line-height:1.25}
+.sh-res{font-size:10.5px;color:var(--ink-2);font-style:italic;margin-top:3px}
+.sh-norm{font-size:10.5px;color:var(--ink-2);margin-top:3px}
+.mhead.compact .cell{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:7px 12px}
+.mhead.compact .sh-res,.mhead.compact .sh-norm{display:none}
+.mhead.compact .sh-sp{margin-top:0}
+.mhead.compact .sh h3{font-size:12.5px}
+.headtog{border:0;background:none;padding:0;margin:0;font-size:10.5px;color:var(--blue);
+  text-decoration:underline;cursor:pointer;white-space:nowrap}
+.sh-sp{font-size:11px;margin-top:5px;padding:2px 6px;border-radius:999px;display:inline-block;
+  background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+.sh-sp.zero{color:var(--ink-2);border-style:dashed}
+.sh-sp b{font-family:"JetBrains Mono",monospace}
+.hint{font-size:11px;color:var(--ink-2)}
+
+/* ---------- строка заявки ---------- */
+.matrix{overflow:auto;padding:0 20px 28px;max-height:calc(100vh - var(--topgap, 120px));overscroll-behavior:contain}
+.spbar{position:sticky;left:0}
+.mtable{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);
+        min-width:calc(var(--headw) + 6*var(--colw))}
+.lane{border-top:1px solid var(--line)}
+.lane .cell{border-right:1px solid var(--line);padding:8px;background:var(--card);min-height:var(--laneh)}
+.lane .cell:last-child{border-right:0}
+.lane .cell.stick{background:var(--paper)}
+.lane .cell.off{background:repeating-linear-gradient(135deg,transparent,transparent 7px,rgba(30,27,22,.045) 7px,rgba(30,27,22,.045) 8px)}
+.lane .cell.off span{font-size:10.5px;color:var(--ink-2);opacity:.7}
+.lane-head{padding:12px 12px;font-family:var(--card-ff)}
+.hcbox{max-height:var(--headh);overflow:auto}
+.hcbox::-webkit-scrollbar{width:6px}
+.hcbox::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.lane-head .id{font-family:"JetBrains Mono",monospace;font-size:calc(var(--card-fs) - 1.5px);color:var(--ink-2)}
+.lane-head h4{margin:1px 0 6px;font-size:calc(var(--card-fs) + 1.5px);font-weight:600;line-height:1.3;cursor:pointer}
+.lane-head h4:hover{text-decoration:underline}
+.chip{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);background:var(--card)}
+.chip.cat-new{background:#EAF1E9;border-color:#BFD4BE}
+.chip.cat-bug{background:#FAE3E1;border-color:#EDC0BC}
+.chip.cat-setup{background:#FFF3D6;border-color:#EBD7A0}
+.chip.cat-consult{background:#E7EEF6;border-color:#C3D3E5}
+.chip.cat-c1{background:#EFE8F3;border-color:#D2C2DD}
+.chip.cat-c2{background:#E6F1EF;border-color:#BBD7D1}
+.chip.cat-c3{background:#F4EDE3;border-color:#DFCDB4}
+.linkbtn{border:0;background:none;padding:0;margin:2px 0 0;font-size:11.5px;color:var(--blue);
+  text-decoration:underline;cursor:pointer}
+.prog{font-size:calc(var(--card-fs) - 1px);color:var(--ink-2);margin-top:8px}
+.prog b{font-family:"JetBrains Mono",monospace;color:var(--ink)}
+.minibar{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;height:7px;margin-top:8px}
+.minibar i{border:1px solid var(--line);border-radius:2px}
+.minibar i.done{background:var(--rose-deep);border-color:var(--rose-deep)}
+.minibar i.current{background:var(--rose);border-color:var(--rose-deep)}
+.minibar i.skip{border-style:dotted;opacity:.45}
+
+/* ---------- задача в ячейке ---------- */
+.scard{background:var(--c-new);border:1px solid var(--c-new-b);border-left-width:4px;border-radius:8px;
+        padding:8px 9px;margin-bottom:6px;cursor:grab;font-family:var(--card-ff)}
+.scard.work{background:var(--c-work);border-color:var(--c-work-b)}
+.scard.done{background:var(--c-done);border-color:var(--c-done-b)}
+.scard.new{border-style:dashed}
+.scard.dragging{opacity:.4}
+.scard .t{font-size:var(--card-fs);font-weight:600;line-height:1.25}
+.scard .m{font-size:calc(var(--card-fs) - 1.5px);color:var(--ink-2);margin-top:4px}
+.scard .acts{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.who-sel{font:inherit;font-size:calc(var(--card-fs) - 1.5px);border:1px solid var(--line);background:var(--card);border-radius:5px;padding:1px 4px;max-width:120px}
+.who-sel:disabled{opacity:.7;background:transparent;border-color:transparent}
+.addbtn{width:100%;border:1px dashed var(--line);background:transparent;color:var(--ink-2);
+        border-radius:8px;padding:6px;cursor:pointer;font-size:11.5px}
+.addbtn:hover{border-color:var(--ink);color:var(--ink)}
+.cell.drop-ok{outline:2px dashed var(--blue);outline-offset:-3px}
+.spbar{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;padding:10px 14px;margin:12px 0 6px;
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--rose-deep);border-radius:10px;font-size:13px}
+.spbar b{font-size:15px}
+.spbar .dim,.spbar.dim{color:var(--ink-2);font-size:12px}
+.group-title{padding:14px 20px 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);
+  position:sticky;left:0;background:var(--paper);z-index:14}
+.empty{padding:24px 20px;color:var(--ink-2);font-size:13px}
+
+/* ---------- панель ---------- */
+.scrim{position:fixed;inset:0;background:rgba(30,27,22,.35);z-index:50}
+.drawer.wide{width:min(1100px,100%)}
+.colorpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:10px}
+.cp{display:flex;gap:9px;align-items:center;font-size:13px;margin:0;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.cp input[type=color]{width:34px;height:26px;border:1px solid var(--line);border-radius:6px;background:none;padding:1px;cursor:pointer}
+.spin{width:52px;font:inherit;font-size:11px;border:1px solid var(--line);background:var(--card);border-radius:5px;padding:2px 4px;text-align:right}
+.listtab{border-collapse:collapse;width:100%;font-size:12px}
+.listtab th{position:sticky;top:0;background:var(--paper);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2);white-space:nowrap}
+.listtab td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.listtab tr.lead td{background:var(--paper);font-weight:600}
+.listtab tbody tr{cursor:pointer}
+.listtab tbody tr:hover td{background:rgba(62,110,158,.08)}
+.listtab th[data-sort]{cursor:pointer;user-select:none}
+.listtab th[data-sort]:hover{color:var(--ink);text-decoration:underline}
+.listtab th.sorted{color:var(--ink)}
+.listtab td.pick,.listtab th.pick{width:28px;text-align:center;cursor:default}
+
+/* ---------- живой ход работы ---------- */
+.progpanel{position:fixed;right:16px;bottom:16px;z-index:80;width:min(420px,calc(100% - 32px));
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:10px;
+  box-shadow:var(--shadow);padding:10px 12px;font-size:12px}
+.progpanel h6{margin:0 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.progpanel ol{margin:0;padding:0;list-style:none;max-height:190px;overflow:auto}
+.progpanel li{display:flex;gap:8px;padding:2px 0;border-bottom:1px dashed var(--line);line-height:1.35}
+.progpanel li:last-child{border-bottom:0}
+.progpanel li.cur{font-weight:600}
+.progpanel .ms{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-2);margin-left:auto;white-space:nowrap}
+.progpanel .tot{margin-top:6px;font-size:11px;color:var(--ink-2)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--card);
+  border-left:1px solid var(--line);z-index:51;display:flex;flex-direction:column}
+.drawer header{padding:16px 20px;border-bottom:1px solid var(--line)}
+.drawer .body{padding:16px 20px 30px;overflow-y:auto;flex:1}
+.drawer h2{font-size:16px;margin:6px 0 8px}
+.sec{margin-top:22px}
+.sec>h5{margin:0 0 8px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+.trow{display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:start;
+      background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:7px}
+.trow.done{background:var(--c-done);border-color:var(--c-done-b)}
+.trow.work{background:var(--c-work);border-color:var(--c-work-b)}
+.trow.new{background:var(--c-new);border-color:var(--c-new-b)}
+.trow .n{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600}
+.check{display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}
+.chat{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px}
+.msg{font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.msg:last-child{border-bottom:0}
+.msg b{font-size:11px;color:var(--ink-2)}
+.rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.note{font-size:12px;color:var(--ink-2);background:var(--paper);border-left:3px solid var(--rose-deep);padding:8px 10px;border-radius:0 6px 6px 0;margin-top:10px}
+
+/* ---------- страница настроек ---------- */
+.settings{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+.settings > label{display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:8px}
+.fieldpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:4px 14px;margin-bottom:10px}
+.fp{display:flex;gap:8px;align-items:center;font-size:13px;margin:0;padding:5px 8px;border:1px solid transparent;border-radius:7px;cursor:pointer}
+.fp.on{background:var(--paper);border-color:var(--line)}
+.preview{margin-top:14px;border:1px dashed var(--line);border-radius:10px;padding:10px;background:var(--paper)}
+.catcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.catcard .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.catcard .head input.name{font:inherit;font-weight:600;border:1px solid transparent;background:transparent;border-radius:6px;padding:4px 6px;min-width:220px}
+.catcard .head input.name:hover,.catcard .head input.name:focus{border-color:var(--line);background:var(--paper)}
+.stagepick{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px}
+.spick{border:1px solid var(--line);border-radius:9px;padding:8px;background:var(--paper)}
+.spick.on{background:var(--rose);border-color:var(--rose-deep)}
+.spick .sn{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2)}
+.spick .snm{font-size:11.5px;font-weight:600;line-height:1.2;margin-top:2px}
+.spick select{width:100%;margin-top:6px;font:inherit;font-size:10.5px;border:1px solid var(--line);border-radius:5px;padding:2px;background:var(--card)}
+.modepick{display:flex;gap:6px}
+.modepick button{border:1px solid var(--line);background:var(--paper);border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer}
+.modepick button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.routeline{font-size:12px;color:var(--ink-2);margin-top:10px}
+
+/* ---------- страницы ---------- */
+.page{padding:22px 24px 60px;max-width:1100px}
+.page h1{font-size:22px;margin:0 0 4px}
+.lead{color:var(--ink-2);margin:0 0 22px;max-width:70ch}
+table{border-collapse:collapse;width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);background:var(--paper)}
+tr:last-child td{border-bottom:0}
+td.num{width:34px;font-family:"JetBrains Mono",monospace;color:var(--ink-2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.person{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+.person .role{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+.person b{display:block;margin:2px 0 8px;font-size:14px}
+.person ul{margin:0;padding-left:16px;font-size:12.5px;color:var(--ink-2)}
+.lvl{float:right;font-size:10.5px;padding:1px 7px;border-radius:999px;border:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--paper);
+  padding:10px 16px;border-radius:8px;font-size:13px;z-index:70}
+@media (max-width:640px){:root{--headw:180px;--colw:150px}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand" id="brand"><b>Маршрут проблемы</b><span>Отдел разработки 1С</span></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-view="board">Доска</button>
+    <button role="tab" aria-selected="false" data-view="routes">Настройки</button>
+    <button role="tab" aria-selected="false" data-view="reglament">Регламент</button>
+    <button role="tab" aria-selected="false" data-view="team">Команда</button>
+  </div>
+  <div class="grow"></div>
+  <input class="f-input" id="q" placeholder="Поиск по проблемам" aria-label="Поиск">
+  <select class="f-input" id="fProject" aria-label="Проект"></select>
+  <select class="f-input" id="fSprint" aria-label="Спринт"></select>
+  <select class="f-input" id="fUser" aria-label="Исполнитель"></select>
+  <button class="btn ghost small" id="refreshBtn" title="Перечитать задачи портала">Обновить</button>
+  <button class="btn ghost small" id="listBtn" title="Плоский список задач по текущему отбору">Сформировать список задач</button>
+  <button class="btn ghost small" id="sprintBtn" title="Задачи исполнителей текущего спринта, созданные в его период и не попавшие в спринт">Добавить задачи в спринт</button>
+  <button class="btn ghost small" id="viewToggle" title="Свернуть или развернуть строки"></button>
+  <button class="btn" id="addBtn">Новая заявка</button>
+  <span class="badge-mode" id="mode">режим не определён</span>
+</header>
+
+<main id="app"></main>
+<div id="layer"></div>
+<div id="progress" class="progpanel" hidden></div>
+
+<script src="//api.bitrix24.com/api/v1/" onerror="window.__bxFail=true"></script>
+<script>
+/* =====================================================================
+   Регламент выполнения заявки → матрица «заявка пользователя × стадии».
+   Строка — заявка пользователя (проблема), растянутая полоской по всем шести
+   стадиям. Колонка — стадия регламента. Внутри строки — дерево подзадач,
+   каждая стоит в колонке своей стадии. Полоска закрашивается только
+   завершёнными подзадачами.
+   ===================================================================== */
+
+/* Версия сборки: видна в подсказке к названию, в настройках и в журнале —
+   по ней сразу понятно, какую версию отдал хостинг после деплоя. */
+const APP_VERSION='2026.08.29-1';
+
+const CONFIG = {
+  storage:'xmlid',                // 'xmlid' — метка в XML_ID (поля TAGS у задач нет), 'uf' — свои поля
+  ufStage:'UF_AUTO_STAGE',
+  ufCategory:'UF_AUTO_CATEGORY',
+  groupId:0,                      // ID скрам-проекта, 0 — все задачи
+  mergeFirstThree:false,          // этапы 1–3 одной подзадачей с чек-листом
+  autoCreateRoute:true,           // после выбора категории создавать подзадачи на все этапы маршрута
+  createOnIntake:'first',         // при приёме заявки: 'first' — только анализ, 'all' — весь маршрут
+  headFields:['id','cat','minibar','progress','current','effort','sp','ensure'],
+  headMode:'full',                // 'full' — обычный вид строки, 'compact' — только наименование
+  headerMode:'full',              // шапка колонок: 'full' — с результатом и нормативом, 'compact' — номер, название, СП
+  cardType:'std',                 // 'std' — типовая карточка, 'custom' — пользовательская
+  cardFields:[],                  // поля задачи портала, добавленные в пользовательскую карточку
+  headH:0,                        // высота карточки заявки, px; 0 — по содержимому
+  cardFs:12,                      // размер шрифта карточек, px
+  cardFf:'',                      // семейство шрифта карточек, пусто — как во всём приложении
+  groupBy:'none',                 // группировка заявок на доске
+  sort:'activity',                // 'activity' | 'name' | 'sp' | 'date'
+  sortDir:'desc',
+  colors:{new:'#FFFDF7', work:'#FCF1BE', done:'#E2F0DD'},   // создана / выполняется / завершена
+  spSource:'marker',              // см. spSourceAuto: подбирается сам, если оценок в метке нет
+  spSourceAuto:true,              // 'marker' — метка в XML_ID, 'field' — польз. поле, 'scrum' — storyPoints скрам-задачи
+  spField:'',                     // польз. поле со сторипоинтами, пусто — метка в XML_ID
+  pctField:'',                    // польз. поле с процентом завершённости задачи
+  pctFallback:'stages',           // если процент не заполнен: 'stages' — по закрытым этапам/статусу, 'zero' — ноль
+  logVerbose:false,               // писать в журнал каждый запрос к порталу
+  logSave:true,                   // сохранять журнал действий между сеансами
+  logLimit:300                    // сколько записей держать
+};
+
+const STAGES = [
+  {id:0, no:'—', name:'Приём заявки',        result:'Заявка зарегистрирована',                normMin:0,   normMax:.25, role:'Функциональный архитектор'},
+  {id:1, no:'1', name:'Анализ',              result:'Понятна категория проблемы',             normMin:.25, normMax:.5,  role:'Аналитик'},
+  {id:2, no:'2', name:'Выработка решения',   result:'Решение согласовано с архитектором и заказчиком', normMin:2, normMax:8, role:'Функциональный архитектор'},
+  {id:3, no:'3', name:'Написание ТЗ',        result:'Техническое описание принятого решения', normMin:8,  normMax:40,  role:'Аналитик'},
+  {id:4, no:'4', name:'Написание кода',      result:'Новый функционал написан в 1С',          normMin:32, normMax:160, role:'Программист'},
+  {id:5, no:'5', name:'Тестирование',        result:'Решение протестировано заказчиком',      normMin:2,  normMax:4,   role:'Постановщик/заказчик'},
+  {id:6, no:'6', name:'Внедрение в рабочую', result:'Решение в рабочем контуре',              normMin:.5, normMax:1,   role:'Программист Senior'},
+  {id:7, no:'✓', name:'Проблема решена',     result:'Задача закрыта, запись в СППР',          normMin:0,  normMax:0,   role:'—'}
+];
+
+/* Справочник категорий проблем. Категория задаёт маршрут и способ создания подзадач. */
+const DEFAULT_CATS = {
+  new:     {label:'Новый функционал',       route:[1,2,3,4,5,6], cls:'cat-new',     mode:'auto',   assignees:{}},
+  bug:     {label:'Исправление ошибки',     route:[4,5,6],       cls:'cat-bug',     mode:'auto',   assignees:{}},
+  setup:   {label:'Настройка механизмами',  route:[1,2,6],       cls:'cat-setup',   mode:'auto',   assignees:{}},
+  consult: {label:'Обучение, консультация', route:[1],           cls:'cat-consult', mode:'manual', assignees:{}}
+};
+/* Поля карточки заявки — что показывать в первой колонке */
+const HEAD_FIELDS=[
+  {id:'id',       label:'Номер задачи'},
+  {id:'cat',      label:'Категория проблемы'},
+  {id:'minibar',  label:'Полоска маршрута'},
+  {id:'progress', label:'Завершено этапов и процент'},
+  {id:'current',  label:'Текущая стадия'},
+  {id:'who',      label:'Исполнитель текущей стадии'},
+  {id:'effort',   label:'Трудозатраты против норматива'},
+  {id:'sp',       label:'Сторипоинты'},
+  {id:'project',  label:'Проект'},
+  {id:'sprint',   label:'Спринт'},
+  {id:'count',    label:'Число подзадач'},
+  {id:'age',      label:'Сколько дней в работе'},
+  {id:'lastmsg',  label:'Последнее сообщение в чате'},
+  {id:'ensure',   label:'Кнопка создания подзадач'}
+];
+const CAT_CLASSES=['cat-new','cat-bug','cat-setup','cat-consult','cat-c1','cat-c2','cat-c3'];
+let CATEGORIES = JSON.parse(JSON.stringify(DEFAULT_CATS));
+
+/* Журнал действий: что приложение сделало с задачами портала */
+const Log={
+  key:'bx_scrum_log', items:[],
+  add(kind, text, extra){
+    const rec={ts:Date.now(), kind, text, extra:extra||null,
+                who:(state.me&&state.me.name)||'', group:state.group||'', sprint:state.sprint||''};
+    this.items.push(rec);
+    const lim=Number(CONFIG.logLimit)||300;
+    if(this.items.length>lim) this.items=this.items.slice(-lim);
+    if(kind==='error') console.warn('[журнал]',text,extra||''); else console.log('[журнал]',text);
+    this.save();
+    return rec;
+  },
+  /* Запись откладывается на полсекунды: при загрузке журнал пополняется десятками строк,
+     и сериализация всего массива на каждой строке заметно тормозила формирование списка. */
+  save(now){
+    if(!CONFIG.logSave) return;
+    if(!now){ clearTimeout(this._t); this._t=setTimeout(()=>this.save(true),500); return; }
+    try{ localStorage.setItem(this.key, JSON.stringify(this.items)); }catch(e){}
+    try{ if(window.BX24 && BX24.userOption) BX24.userOption.set(this.key, JSON.stringify(this.items.slice(-100))); }catch(e){}
+  },
+  load(){
+    if(!CONFIG.logSave) return;
+    try{ const v=localStorage.getItem(this.key); if(v){ this.items=JSON.parse(v)||[]; return; } }catch(e){}
+    try{ if(window.BX24 && BX24.userOption){ const v=BX24.userOption.get(this.key); if(v) this.items=JSON.parse(v)||[]; } }catch(e){}
+  },
+  clear(){ this.items=[];
+    try{ localStorage.removeItem(this.key); }catch(e){}
+    try{ if(window.BX24 && BX24.userOption) BX24.userOption.set(this.key,''); }catch(e){}
+  },
+  csv(){
+    const rows=[['время','тип','действие','подробности','сотрудник','проект','спринт']]
+      .concat(this.items.map(r=>[dtime(r.ts), r.kind, r.text,
+                                 r.extra?Object.entries(r.extra).map(([k,v])=>k+': '+v).join(', '):'',
+                                 r.who, projectName(r.group), r.sprint?sprintName(r.sprint):'']));
+    return toCsv(rows);
+  }
+};
+
+/* Личный выбор фильтров: у каждого сотрудника свой, портальные настройки не трогает */
+/* Кэш списка проектов: при следующем открытии селект заполняется мгновенно */
+const ProjCache={
+  key:'bx_scrum_projects',
+  read(){ try{ const v=JSON.parse(localStorage.getItem(this.key)||'null');
+    return (v && Date.now()-v.ts < 24*3600*1000 && Array.isArray(v.list) && v.list.length) ? v.list : null;
+  }catch(e){ return null; } },
+  write(list){ try{ localStorage.setItem(this.key, JSON.stringify({ts:Date.now(), list})); }catch(e){} }
+};
+
+const Prefs={
+  key:'bx_scrum_filters',
+  read(){
+    try{ if(window.BX24 && BX24.userOption){ const v=BX24.userOption.get(this.key); if(v) return JSON.parse(v); } }catch(e){}
+    try{ const v=localStorage.getItem(this.key); if(v) return JSON.parse(v); }catch(e){}
+    return null;
+  },
+  write(){
+    const s=JSON.stringify({group:state.group, sprint:state.sprint, user:state.user});
+    try{ localStorage.setItem(this.key,s); }catch(e){}
+    try{ if(window.BX24 && BX24.userOption) BX24.userOption.set(this.key,s); }catch(e){}
+  },
+  apply(){
+    const d=this.read(); if(!d) return;
+    if(d.group!=null) state.group=d.group;
+    if(d.sprint!=null) state.sprint=d.sprint;
+    if(d.user!=null) state.user=d.user;
+  }
+};
+
+/* Настройки живут в приложении портала, вне портала — в браузере */
+const Store={
+  key:'bx_scrum_settings',
+  read(){
+    try{ if(window.BX24 && BX24.appOption){ const v=BX24.appOption.get(this.key); if(v) return JSON.parse(v); } }catch(e){}
+    try{ const v=localStorage.getItem(this.key); if(v) return JSON.parse(v); }catch(e){}
+    return null;
+  },
+  write(){
+    const data={cats:CATEGORIES, autoCreateRoute:CONFIG.autoCreateRoute, createOnIntake:CONFIG.createOnIntake,
+                headFields:CONFIG.headFields, headMode:CONFIG.headMode, sort:CONFIG.sort, sortDir:CONFIG.sortDir, groupBy:CONFIG.groupBy,
+                headH:CONFIG.headH, cardFs:CONFIG.cardFs, cardFf:CONFIG.cardFf, headerMode:CONFIG.headerMode,
+                cardType:CONFIG.cardType, cardFields:CONFIG.cardFields,
+                logSave:CONFIG.logSave, logLimit:CONFIG.logLimit, logVerbose:CONFIG.logVerbose,
+                spSource:CONFIG.spSource, spSourceAuto:CONFIG.spSourceAuto, spField:CONFIG.spField, pctField:CONFIG.pctField, pctFallback:CONFIG.pctFallback,
+                colors:CONFIG.colors};
+    const s=JSON.stringify(data);
+    try{ localStorage.setItem(this.key,s); }catch(e){}
+    try{ if(window.BX24 && BX24.appOption) BX24.appOption.set(this.key,s); }catch(e){}
+  },
+  apply(){
+    const d=this.read(); if(!d) return;
+    if(d.cats && Object.keys(d.cats).length) CATEGORIES=d.cats;
+    if(typeof d.autoCreateRoute==='boolean') CONFIG.autoCreateRoute=d.autoCreateRoute;
+    if(d.createOnIntake) CONFIG.createOnIntake=d.createOnIntake;
+    if(Array.isArray(d.headFields)) CONFIG.headFields=d.headFields;
+    if(d.headMode) CONFIG.headMode=d.headMode;
+    if(d.headerMode) CONFIG.headerMode=d.headerMode;
+    if(d.cardType) CONFIG.cardType=d.cardType;
+    if(Array.isArray(d.cardFields)) CONFIG.cardFields=d.cardFields;
+    if(d.headH!=null) CONFIG.headH=Number(d.headH)||0;
+    if(d.cardFs!=null) CONFIG.cardFs=Number(d.cardFs)||12;
+    if(d.cardFf!=null) CONFIG.cardFf=d.cardFf;
+    if(d.sort) CONFIG.sort=d.sort;
+    if(d.groupBy) CONFIG.groupBy=d.groupBy;
+    if(d.sortDir) CONFIG.sortDir=d.sortDir;
+    if(typeof d.logSave==='boolean') CONFIG.logSave=d.logSave;
+    if(typeof d.logVerbose==='boolean') CONFIG.logVerbose=d.logVerbose;
+    if(d.logLimit) CONFIG.logLimit=Number(d.logLimit);
+    if(d.spSource) CONFIG.spSource=d.spSource;
+    if(typeof d.spSourceAuto==='boolean') CONFIG.spSourceAuto=d.spSourceAuto;
+    if(d.spField!=null) CONFIG.spField=d.spField;
+    if(d.pctField!=null) CONFIG.pctField=d.pctField;
+    if(d.pctFallback) CONFIG.pctFallback=d.pctFallback;
+    if(d.colors) CONFIG.colors=Object.assign({}, CONFIG.colors, d.colors);
+    Object.values(CATEGORIES).forEach(c=>{ c.assignees=c.assignees||{}; c.mode=c.mode||'auto'; c.route=c.route||[]; });
+  }
+};
+
+const TEAM = [
+  {id:'kirzhbaum',name:'Константин Киржбаум',role:'Руководитель отдела',lvl:'',
+   duties:['Координация выполнения задач','Разработка мотивации','Контроль выполнения задач','Внедрение новых инструментов и практик'],stages:[]},
+  {id:'galkina',name:'Александра Галкина',role:'Функциональный архитектор / Аналитик',lvl:'',
+   duties:['Первая линия поддержки','Ведение СППР','Приём заявок','Написание ТЗ'],stages:[0,1,2,3]},
+  {id:'artimenko',name:'Евгений Артименко',role:'Аналитик',lvl:'',
+   duties:['Первая линия поддержки','Написание ТЗ','Тестирование типовых обновлений','Вопросы по кассе (ТСПИОТ), по чекам','Возможно кодирование'],stages:[1,2,3]},
+  {id:'girshfeld',name:'Андрей Гиршфельд',role:'Программист',lvl:'Senior',
+   duties:['Вторая линия поддержки','Разработка сложных задач (УТ, БП, ЗУП, WMS)'],stages:[4]},
+  {id:'streltsov',name:'Дмитрий Стрельцов',role:'Программист',lvl:'Senior',
+   duties:['Вторая линия поддержки','Разработка сложных задач','Обновление баз 1С','Перенос в рабочую'],stages:[4,6]},
+  {id:'bystrov',name:'Михаил Быстров',role:'Программист',lvl:'Junior',
+   duties:['Первая линия поддержки','Разработка несложных задач','Консультирование пользователей','Рост до Senior'],stages:[1,4]},
+  {id:'customer',name:'Постановщик / заказчик',role:'Внешний участник',lvl:'',
+   duties:['Формулирует проблему','Тестирует решение в 1С','Пишет результат теста в чат заявки'],stages:[5]}
+];
+
+const ISSUES = [
+  ['Как двигать задачи, создавать','Автоматом по триггерам либо руками: руководитель отдела, функциональный архитектор'],
+  ['Переписка в каком чате','Только в заявке. Записи в подчинённых задачах ограничиваем'],
+  ['Усложнение схемы, трудоёмкость поддержания','Этапы 1, 2, 3 объединяются в одну подзадачу с чек-листом по каждому пункту'],
+  ['Как наложить на скрам и типовое решение','Стадия скрама = этап. Статус внутри задачи задаёт шаг стадии (начал / завершил)'],
+  ['Как стыкуется с существующей практикой','Открытый вопрос: обкатать на одной ветке заявок и сравнить трудозатраты']
+];
+
+/* =====================  БИТРИКС24  =====================
+   Сверено со структурой портала (tasks.task.getFields, tasks.task.list):
+   • поля запроса в ВЕРХНЕМ регистре, в ответе приходят camelCase;
+   • числа приходят строками ("0", "5135"), даты — ISO со смещением;
+   • поля TAGS у задач нет, поэтому этап и категория живут в XML_ID;
+   • спринт и стадия скрама лежат прямо в задаче: sprintId, stageId;
+   • исполнитель приходит объектом responsible {id, name, workPosition};
+   • статусы: 2 ждёт, 3 выполняется, 4 ожидает контроля, 5 завершена, 6 отложена.
+   ======================================================== */
+const TASK_SELECT_BASE=['ID','TITLE','DESCRIPTION','PARENT_ID','RESPONSIBLE_ID','STATUS','GROUP_ID',
+  'SPRINT_ID','STAGE_ID','XML_ID','CREATED_DATE','CHANGED_DATE','ACTIVITY_DATE','CLOSED_DATE',
+  'DEADLINE','TIME_ESTIMATE','TIME_SPENT_IN_LOGS'];
+const taskSelect=()=>{
+  const extra=(CONFIG.cardType==='custom'?(CONFIG.cardFields||[]):[])
+    .concat([CONFIG.spField,CONFIG.pctField]).filter(Boolean);
+  return TASK_SELECT_BASE.concat(extra.filter(f=>TASK_SELECT_BASE.indexOf(f)<0)
+    .filter((v,i,a)=>a.indexOf(v)===i));
+};
+/* Русские подписи типовых реквизитов задачи — для конструктора пользовательской карточки */
+const STD_FIELD_RU={
+  ID:'ID задачи', TITLE:'Название', DESCRIPTION:'Описание', PARENT_ID:'Родительская задача',
+  RESPONSIBLE_ID:'Исполнитель', CREATED_BY:'Постановщик', STATUS:'Статус', PRIORITY:'Приоритет',
+  GROUP_ID:'Проект', SPRINT_ID:'Спринт', STAGE_ID:'Стадия скрама', XML_ID:'Метка XML_ID',
+  CREATED_DATE:'Дата создания', CHANGED_DATE:'Дата изменения', ACTIVITY_DATE:'Последняя активность',
+  CLOSED_DATE:'Дата закрытия', START_DATE_PLAN:'Плановое начало', END_DATE_PLAN:'Плановое окончание',
+  DEADLINE:'Крайний срок', TIME_ESTIMATE:'Оценка времени', TIME_SPENT_IN_LOGS:'Затрачено времени',
+  MARK:'Оценка задачи', ACCOMPLICES:'Соисполнители', AUDITORS:'Наблюдатели', TAGS:'Метки',
+  ALLOW_TIME_TRACKING:'Учёт времени', FLOW_ID:'Поток', BACKLOG_ID:'Бэклог'
+};
+/* Список полей для конструктора: с портала, если он на связи, иначе типовой минимум */
+function portalFieldList(){
+  const out=[];
+  const f=state.taskFields;
+  if(f && typeof f==='object'){
+    Object.entries(f).forEach(([name,d])=>{
+      const title=(d&&(d.title||d.TITLE))||STD_FIELD_RU[name]||name;
+      out.push({name, title:String(title), uf:/^UF_/.test(name), type:(d&&(d.type||d.TYPE))||''});
+    });
+  }else{
+    Object.entries(STD_FIELD_RU).forEach(([name,title])=>out.push({name,title,uf:false,type:''}));
+  }
+  out.sort((a,b)=>(a.uf===b.uf?a.title.localeCompare(b.title,'ru'):(a.uf?1:-1)));
+  return out;
+}
+const fieldLabel=name=>{
+  const f=portalFieldList().find(x=>x.name===name);
+  return f?f.title:(STD_FIELD_RU[name]||name);
+};
+/* Значение поля задачи для карточки: даты, объекты-люди, массивы и числа приводятся к читаемому виду */
+function fieldValue(pr, name){
+  const t=pr&&pr.raw; if(!t) return '';
+  let v=t[BX.camel(name)];
+  if(v===undefined) v=t[name];
+  if(v===undefined||v===null||v==='') return '';
+  if(Array.isArray(v)) return v.map(x=>(x&&(x.name||x.title))||x).join(', ');
+  if(typeof v==='object') return String(v.name||v.title||v.id||'');
+  const str=String(v);
+  if(/^\d{4}-\d{2}-\d{2}T/.test(str)) return ddate(new Date(str).getTime());
+  if(name==='STATUS') return {'1':'новая','2':'ждёт выполнения','3':'выполняется','4':'ждёт контроля','5':'завершена','6':'отложена'}[str]||str;
+  if(name==='GROUP_ID') return projectName(str);
+  if(name==='SPRINT_ID') return str&&str!=='0'?sprintName(str):'бэклог';
+  if(name==='RESPONSIBLE_ID'||name==='CREATED_BY') return person('u'+str).name;
+  if(name==='TIME_ESTIMATE'||name==='TIME_SPENT_IN_LOGS') return hours(Number(str)/3600);
+  return str;
+}
+
+const BX = {
+  ready:false,
+  /* На портале result.error_description — ФУНКЦИЯ, а не строка: без разбора
+     в журнал попадал исходник функции вместо текста ошибки. */
+  errorText(r){
+    try{
+      const e=r.error();
+      if(!e) return 'неизвестная ошибка';
+      if(typeof r.error_description==='function'){ const d=r.error_description(); if(d) return String(d); }
+      if(typeof e==='string') return e;
+      if(typeof e==='function'){ const d=e(); return typeof d==='string'?d:JSON.stringify(d); }
+      if(e.error_description) return String(e.error_description);
+      if(e.ex) return String(e.ex.error_description||e.ex.error||JSON.stringify(e.ex));
+      if(e.error) return String(e.error);
+      return JSON.stringify(e);
+    }catch(x){ return 'ошибка не разобрана'; }
+  },
+  callRaw(method, params){
+    const t0=Date.now();
+    return new Promise((res,rej)=>{
+      if(!this.ready) return rej(new Error('BX24 недоступен'));
+      BX24.callMethod(method, params||{}, r=>{
+        const ms=Date.now()-t0;
+        if(r.error()){
+          const msg=this.errorText(r);
+          Log.add('error','REST '+method+': '+msg, {параметры:JSON.stringify(params||{}).slice(0,300), мс:ms});
+          return rej(new Error(msg));
+        }
+        if(CONFIG.logVerbose){
+          const d=r.data(); const n=Array.isArray(d)?d.length:(d&&d.tasks?d.tasks.length:(d&&typeof d==='object'?Object.keys(d).length:1));
+          let total=null; try{ total=r.total?r.total():null; }catch(e){}
+          Log.add('api','REST '+method, {параметры:JSON.stringify(params||{}).slice(0,300),
+                                         получено:n, всего:total==null?'—':total, мс:ms});
+        }
+        res(r);
+      });
+    });
+  },
+  async call(method, params){ return (await this.callRaw(method, params)).data(); },
+
+  /* Пакет: до 50 команд одним HTTP-запросом вместо 50 отдельных. */
+  callBatch(cmds){
+    const keys=Object.keys(cmds);
+    if(!keys.length) return Promise.resolve({});
+    const t0=Date.now();
+    return new Promise((res,rej)=>{
+      if(!this.ready) return rej(new Error('BX24 недоступен'));
+      try{
+        BX24.callBatch(cmds, r=>{
+          const out={};
+          keys.forEach(k=>{
+            const item=r&&r[k];
+            try{ out[k]= item && !item.error() ? item.data() : null; }catch(e){ out[k]=null; }
+          });
+          if(CONFIG.logVerbose)
+            Log.add('api','REST пакет: команд '+keys.length, {мс:Date.now()-t0});
+          res(out);
+        });
+      }catch(e){ rej(e); }
+    });
+  },
+  toArray(r){
+    if(!r) return [];
+    if(Array.isArray(r)) return r;
+    for(const k of ['tasks','sprints','items','result','list']) if(Array.isArray(r[k])) return r[k];
+    const v=Object.values(r);
+    return v.length && typeof v[0]==='object' ? v : [];
+  },
+  num(v){ return Number(v||0)||0; },
+  d(s){ return s?String(s).slice(0,10).split('-').reverse().slice(0,2).join('.'):''; },
+
+  /* --- метка этапа и категории: поля TAGS на портале нет, пишем в XML_ID --- */
+  camel(uf){ return String(uf||'').toLowerCase().replace(/_([a-z0-9])/g,(m,c)=>c.toUpperCase()); },
+  parseXml(src){
+    const o={}, re=/bxs:(\w+)=([\w.-]*)/g; let m;
+    while((m=re.exec(String(src||'')))) o[m[1]]=m[2];
+    return o;
+  },
+  /* этап, категория, сторипоинты и процент: из польз. полей, если заданы, иначе из метки в XML_ID */
+  marker(t){
+    const src = CONFIG.storage==='uf' && t[CONFIG.ufStage]!=null
+      ? 'bxs:stage='+t[CONFIG.ufStage]+';bxs:cat='+(t[CONFIG.ufCategory]||'')
+      : (t.xmlId||t.XML_ID||'');
+    const o=this.parseXml(src);
+    const uf=k=>{ const f=CONFIG[k]; if(!f) return null;
+      const v = t[this.camel(f)]!==undefined ? t[this.camel(f)] : t[f];
+      return (v===undefined||v===null||v==='')?null:v; };
+    const sp=uf('spField')!=null?uf('spField'):(o.sp!=null?o.sp:null);
+    const pct=uf('pctField')!=null?uf('pctField'):(o.pct!=null?o.pct:null);
+    return {stage:o.stage!=null?Number(o.stage):null, cat:o.cat||null,
+            sp: sp==null?null:(Number(sp)||0), pct: pct==null?null:(Number(pct)||0)};
+  },
+  stageOf(t){
+    const m=this.marker(t);
+    if(m.stage!=null) return m.stage;
+    const byTitle=/Этап\s*(\d)/.exec(t.title||'');
+    return byTitle?Number(byTitle[1]):0;
+  },
+  catOf(t){
+    const m=this.marker(t);
+    return (m.cat && CATEGORIES[m.cat]) ? m.cat : Object.keys(CATEGORIES)[0];
+  },
+  buildXmlId(oldXml, patch){
+    const cur=Object.assign(this.parseXml(oldXml), patch||{});
+    const rest=String(oldXml||'').replace(/bxs:\w+=[\w.-]*/g,'').replace(/[;\s]+/g,' ').trim();
+    const parts=Object.entries(cur)
+      .filter(([k,v])=>v!==null&&v!==undefined&&v!=='')
+      .map(([k,v])=>'bxs:'+k+'='+v);
+    return (rest?rest+' ':'')+parts.join(';');
+  },
+  setMarker(task, patch){
+    const fields={};
+    const xml=Object.assign({},patch);
+    if(CONFIG.spField && patch.sp!==undefined){ fields[CONFIG.spField]=patch.sp; delete xml.sp; }
+    if(CONFIG.pctField && patch.pct!==undefined){ fields[CONFIG.pctField]=patch.pct; delete xml.pct; }
+    if(CONFIG.storage==='uf'){
+      if(xml.stage!==undefined) fields[CONFIG.ufStage]=xml.stage;
+      if(xml.cat!==undefined) fields[CONFIG.ufCategory]=xml.cat||'';
+      delete xml.stage; delete xml.cat;
+    }
+    if(Object.keys(xml).length) fields.XML_ID=this.buildXmlId(task.xmlId, xml);
+    return this.call('tasks.task.update',{taskId:Number(task.bxId), fields});
+  },
+
+  /* --- статус задачи → шаг внутри этапа --- */
+  status(v){
+    const n=this.num(v);
+    if(n===5) return 'done';
+    if(n===3||n===4) return 'work';
+    return 'new';
+  },
+
+  /* --- задачи проекта одним запросом, родители и подзадачи разбираем на клиенте --- */
+  /* Внимание: next/total приходят в конверте ответа, а не внутри data().
+     Раньше чтение обрывалось на первой странице — берём страницы по явному смещению start. */
+  async loadTasks(filterIn, label, onPage){
+    const filter=Object.assign({}, filterIn||{});
+    const PAGE=50;
+    let start=0, all=[], pages=0, total=null, seen=new Set();
+    for(let page=0; page<40; page++){
+      const res=await this.callRaw('tasks.task.list',{filter, select:taskSelect(), start});
+      const arr=this.toArray(res.data());
+      pages++;
+      let fresh=0;
+      arr.forEach(x=>{ const id=String(x.id); if(!seen.has(id)){ seen.add(id); all.push(x); fresh++; } });
+      try{ const tt=res.total?res.total():null; if(tt!=null) total=Number(tt); }catch(e){}
+      Log.add('page','Страница задач '+pages+': получено '+arr.length+', новых '+fresh,
+              {смещение:start, всего:total==null?'—':total, отбор:JSON.stringify(filter)});
+      Progress.step('Читаю задачи ('+(label||'отбор')+'): страница '+pages+', получено '+all.length
+        +(total!=null?' из '+total:''));
+      if(onPage){ try{ onPage(all.slice(), pages, total); }catch(e){} }
+      if(arr.length<PAGE) break;
+      start+=arr.length;
+      if(total!=null && all.length>=total) break;
+    }
+    this.lastLoad={pages, got:all.length, total, label:label||''};
+    console.log('[задачи] страниц:',pages,'получено:',all.length,'всего по порталу:',total, label||'');
+    return all;
+  },
+  /* Подзадача должна попасть в тот же проект и спринт, иначе на скрам-доске её не видно.
+     SPRINT_ID и GROUP_ID принимает не каждый портал — при отказе повторяем без них. */
+  async addSubtask(parentId, title, responsibleId, estimateH, stage, cat, groupId, sprintId){
+    const base={TITLE:title, PARENT_ID:Number(parentId), RESPONSIBLE_ID:Number(responsibleId)||1,
+                TIME_ESTIMATE:Math.round((estimateH||1)*3600),
+                XML_ID:this.buildXmlId('', {stage, cat})};
+    const full=Object.assign({}, base);
+    if(groupId) full.GROUP_ID=Number(groupId);
+    if(sprintId) full.SPRINT_ID=Number(sprintId);
+    try{
+      const r=await this.call('tasks.task.add',{fields:full});
+      Log.add('task','Подзадача создана в портале',{задача:r.task&&r.task.id,
+        проект:full.GROUP_ID||'—', спринт:full.SPRINT_ID||'—'});
+      return r;
+    }catch(e){
+      Log.add('error','Создание с проектом и спринтом отклонено: '+e.message+'. Повтор без них.',
+              {поля:Object.keys(full).join(', ')});
+      const r=await this.call('tasks.task.add',{fields:base});
+      Log.add('task','Подзадача создана без привязки к спринту — на скрам-доске её нужно перетащить вручную',
+              {задача:r.task&&r.task.id});
+      return r;
+    }
+  },
+  complete(taskId){ return this.call('tasks.task.complete',{taskId:Number(taskId)}); },
+  start(taskId){ return this.call('tasks.task.start',{taskId:Number(taskId)}); },
+  setResponsible(taskId,userId){ return this.call('tasks.task.update',{taskId:Number(taskId),fields:{RESPONSIBLE_ID:Number(userId)||1}}); },
+  comment(taskId,text){ return this.call('task.commentitem.add',[Number(taskId),{POST_MESSAGE:text}]); },
+
+  /* Старт одним запросом: поля, текущий пользователь и список проектов. */
+  async bootData(){
+    const cmds={
+      fields:['tasks.task.getFields',{}],
+      me:['user.current',{}],
+      groups:['sonet_group.get',{}],
+      wg:['socialnetwork_api.workgroup.list',{select:['ID','NAME','IS_SCRUM_PROJECT']}]
+    };
+    const r=await this.callBatch(cmds);
+    const out={fields:r.fields&&(r.fields.fields||r.fields), me:r.me, projects:[]};
+    const wg=this.toArray(r.wg).map(g=>g.workgroup||g);
+    const src=wg.length?wg:this.toArray(r.groups);
+    out.projects=src.map(g=>{
+      const f=g.isScrumProject!==undefined?g.isScrumProject:g.IS_SCRUM_PROJECT;
+      return {id:String(g.id||g.ID), name:g.name||g.NAME,
+              scrum: f===undefined?null:(f===true||f==='Y'||f===1||f==='1')};
+    }).filter(g=>g.id&&g.name);
+    return out;
+  },
+
+  /* --- проекты --- */
+  async loadProjects(){
+    try{
+      const r=await this.call('socialnetwork_api.workgroup.list',{select:['ID','NAME','IS_SCRUM_PROJECT']});
+      const arr=this.toArray(r).map(g=>g.workgroup||g);
+      const out=arr.map(g=>{
+        const f=g.isScrumProject!==undefined?g.isScrumProject:g.IS_SCRUM_PROJECT;
+        return {id:String(g.id||g.ID), name:g.name||g.NAME,
+                scrum: f===undefined?null:(f===true||f==='Y'||f===1||f==='1')};
+      }).filter(g=>g.id&&g.name);
+      if(out.length) return out;
+      throw new Error('пустой список');
+    }catch(e){
+      console.warn('[проекты] workgroup.list:', e.message);
+      const r=await this.call('sonet_group.get',{});
+      return this.toArray(r).map(g=>({id:String(g.ID||g.id), name:g.NAME||g.name, scrum:null}));
+    }
+  },
+
+  /* --- сторипоинты скрама: живут в скрам-задаче (tasks.api.scrum.task), а не в самой задаче ---
+     Разобрано по выгрузке структуры портала от 29.08.2026 и справочнику REST:
+     • tasks.api.scrum.task.get принимает параметр id, а НЕ taskId. На taskId портал отвечает
+       «Task not found», поэтому оценок не было видно вообще — ни одной, при том что в задачах они есть;
+     • метода tasks.api.scrum.task.list не существует (Method not found) — берём только пакетами по get;
+     • storyPoints приходит строкой ("8", "2.5"), иногда с запятой;
+     • ответ get — плоский объект {entityId, storyPoints, epicId, sort, createdBy, modifiedBy}. */
+  spNum(v){
+    if(v===null||v===undefined||v==='') return 0;
+    const n=Number(String(v).replace(',','.').trim());
+    return isNaN(n)?0:n;
+  },
+  spFromAnswer(v){
+    if(!v||typeof v!=='object') return 0;
+    if(v.storyPoints!==undefined) return this.spNum(v.storyPoints);
+    if(v.story_points!==undefined) return this.spNum(v.story_points);
+    for(const k of ['result','task','item','data']) if(v[k]&&typeof v[k]==='object'){
+      const n=this.spFromAnswer(v[k]); if(n) return n;
+    }
+    return 0;
+  },
+  async loadScrumPoints(ids){
+    const out={};
+    state.spCache=state.spCache||{};
+    const now=Date.now(), TTL=5*60*1000;
+    const want=[...new Set((ids||[]).map(String))].filter(Boolean), ask=[];
+    want.forEach(id=>{ const c=state.spCache[id];
+      if(c && now-c.ts<TTL){ if(c.sp) out[id]=c.sp; } else ask.push(id); });
+    if(!ask.length){ Log.add('load','Сторипоинты взяты из кэша: '+Object.keys(out).length+' задач'); return out; }
+    return await this.scrumPointsBatch(ask, out);
+  },
+  /* поштучно, но пакетами по 50 команд: 200 задач — четыре запроса, а не двести */
+  async scrumPointsBatch(ask, out){
+    out=out||{};
+    const list=ask.slice(0,300), t0=Date.now();
+    let asked=0, found=0, sample=null;
+    for(let i=0;i<list.length;i+=50){
+      const chunk=list.slice(i,i+50), cmds={};
+      chunk.forEach(id=>{ cmds['t'+id]=['tasks.api.scrum.task.get',{id:Number(id)}]; });
+      let part;
+      try{ part=await this.callBatch(cmds); }
+      catch(e){ Log.add('error','Сторипоинты скрама недоступны: '+e.message); break; }
+      asked+=chunk.length;
+      let got=0;
+      Object.entries(part).forEach(([k,v])=>{
+        if(sample===null && v) sample=JSON.stringify(v).slice(0,200);
+        const sp=this.spFromAnswer(v);
+        if(sp){ out[k.slice(1)]=sp; got++; }
+      });
+      found+=got;
+      Progress.step('Сторипоинты: спрошено '+asked+' задач, с оценкой '+found);
+      /* пустой первый пакет — метод молчит на все задачи, дальше не долбим */
+      if(i===0 && !got && Object.values(part).every(v=>v===null||v===undefined)) break;
+    }
+    const now=Date.now();
+    list.forEach(id=>{ state.spCache[id]={sp:out[id]||0, ts:now}; });
+    Log.add('load','Сторипоинты из скрам-задач: спрошено '+asked+', с оценкой '+found,
+            {мс:Date.now()-t0, 'образец ответа':sample||'—'});
+    return out;
+  },
+  /* Запись оценки в скрам-задачу. Параметр тоже id, а не taskId.
+     entityId обязателен к переносу: без него портал перекладывает задачу в бэклог спринта. */
+  async setScrumPoints(taskId, sp){
+    let cur=null;
+    try{ cur=await this.call('tasks.api.scrum.task.get',{id:Number(taskId)}); }catch(e){}
+    const fields={storyPoints:String(sp)};
+    const ent=cur&&(cur.entityId||cur.ENTITY_ID);
+    if(ent) fields.entityId=Number(ent);
+    if(cur&&cur.epicId) fields.epicId=Number(cur.epicId);
+    const r=await this.call('tasks.api.scrum.task.update',{id:Number(taskId), fields});
+    state.spCache=state.spCache||{};
+    state.spCache[String(taskId)]={sp:Number(sp)||0, ts:Date.now()};
+    Log.add('sp','Оценка записана в скрам-задачу #'+taskId+': '+sp+' СП',
+            {entityId:ent||'—'});
+    return r;
+  },
+
+  /* --- поля портала: подбираем процент и сторипоинты по заголовкам --- */
+  async detectFields(){
+    const f=await this.call('tasks.task.getFields');
+    const fields=f.fields||f, found={};
+    Object.entries(fields).forEach(([name,d])=>{
+      if(!/^UF_/.test(name)) return;
+      const title=String((d&&d.title)||'').toLowerCase();
+      if(!found.pct && /процент|percent|готовн/.test(title)) found.pct=name;
+      if(!found.sp && /стори|story|поинт|point|оценк/.test(title)) found.sp=name;
+    });
+    return found;
+  },
+
+  /* --- спринты: имена из скрам-метода, состав — из самих задач по sprintId --- */
+  async loadSprints(groupId){
+    const gid=Number(groupId);
+    const tries=[
+      ['tasks.api.scrum.sprint.list',{filter:{groupId:gid}}],
+      ['tasks.api.scrum.sprint.list',{filter:{GROUP_ID:gid}}],
+      ['tasks.api.scrum.sprint.list',{filter:{groupId:gid},order:{id:'desc'},select:['id','name','status','dateStart','dateEnd','groupId']}],
+      ['tasks.api.scrum.sprint.list',{}]
+    ];
+    let last=null;
+    for(const [method,params] of tries){
+      try{
+        const arr=this.toArray(await this.call(method,params));
+        const norm=arr.map(s=>({
+          id:String(s.id||s.ID),
+          groupId:String(s.groupId||s.GROUP_ID||gid),
+          name:s.name||s.NAME||('Спринт #'+(s.id||s.ID)),
+          status:String(s.status||s.STATUS||'').toLowerCase(),
+          from:this.d(s.dateStart||s.DATE_START), to:this.d(s.dateEnd||s.DATE_END),
+          fromRaw:String(s.dateStart||s.DATE_START||''), toRaw:String(s.dateEnd||s.DATE_END||'')
+        })).filter(s=>s.id&&s.id!=='undefined'&&String(s.groupId)===String(gid));
+        console.log('[спринты]',method,JSON.stringify(params),'→',norm.length);
+        if(norm.length) return norm;
+      }catch(e){ last=e; console.warn('[спринты]',method,e.message); }
+    }
+    if(last) throw last;
+    return [];
+  }
+};
+
+/* =====================  СОСТОЯНИЕ  ===================== */
+const H=3600*1000;
+let seq=1;
+let state={view:'board', q:'', user:'', group:'', sprint:'', sprintState:'ok', live:false, map:{}, users:[], me:null,
+           listSort:null, taskFields:null, cardFieldQ:'', intake:null,
+           projects:demoProjects(), sprints:demoSprints(), problems:demo()};
+
+function demoProjects(){
+  return [{id:'g1',name:'Автоматизация УТ',scrum:true},
+          {id:'g2',name:'Склад и WMS',scrum:true},
+          {id:'g3',name:'Поддержка пользователей',scrum:false}];
+}
+function demoSprints(){
+  return [{id:'s12',groupId:'g1',name:'Спринт 12',status:'active',   from:'11.08',to:'24.08'},
+          {id:'s13',groupId:'g1',name:'Спринт 13',status:'planned',  from:'25.08',to:'07.09'},
+          {id:'s05',groupId:'g2',name:'Спринт 5', status:'active',   from:'18.08',to:'31.08'},
+          {id:'sw', groupId:'g3',name:'Текущая неделя',status:'active',from:'25.08',to:'31.08'}];
+}
+
+function demo(){
+  const now=Date.now();
+  const P=(id,title,cat,subs,chat)=>({
+    id, bxId:null, tags:[], title, cat, chat:chat||[], checks:{}, merged:false,
+    groupId:'', sprintId:'', createdAt:now-40*H, subs:subs.map(s=>sub(s[0],s[1],s[2],s[3],s[4]))
+  });
+  const sub=(stage,who,status,reactionMin,spentH)=>({sid:'s'+(seq++), stage, who, status,
+    reactionMin, spentH, createdAt:Date.now()-10*H, title:null});
+  const list=[
+    P('P-101','Автозаполнение штрихкодов в заказе клиента (УТ)','new',
+      [[1,'galkina','done',22,.4],[2,'galkina','done',35,6],[3,'artimenko','work',12,14]],
+      [['Постановщик','Кладовщики вбивают штрихкоды руками, тратим по 40 минут на заказ'],
+       ['Галкина','Категория — новый функционал, маршрут все шесть этапов'],
+       ['Артименко','ТЗ на 60%, остался вопрос по правилам обмена с WMS']]),
+    P('P-092','Отчёт по трудозатратам склада WMS','new',
+      [[1,'artimenko','done',14,.5],[2,'galkina','done',30,7],[3,'artimenko','done',20,31],
+       [4,'streltsov','done',40,118],[5,'customer','work',180,3]],
+      [['Стрельцов','Код в 1С, в тесте. Передал заказчику'],
+       ['Постановщик','Проверяю по трём складам, до конца дня отпишусь']]),
+    P('P-104','Не проходит закрытие месяца в БП после обновления','bug',
+      [[4,'girshfeld','work',18,26]],
+      [['Постановщик','Ошибка воспроизводится на копии, лог приложил'],
+       ['Гиршфельд','Нашёл причину в типовом модуле, готовлю исправление']]),
+    P('P-088','Перенос доработки печатных форм в рабочую','bug',
+      [[4,'bystrov','done',25,30],[5,'customer','done',60,3],[6,'streltsov','work',10,.4]],
+      [['Постановщик','Тест положительный, замечаний нет']]),
+    P('P-097','Настроить права на отчёты для новых кладовщиков','setup',
+      [[1,'galkina','done',9,.3],[2,'galkina','work',15,3]],
+      [['Галкина','Делается штатными механизмами, кодирование не нужно']]),
+    P('P-110','Как выгрузить чеки за период — обучение кассиров','consult',
+      [[1,'bystrov','done',5,.4]],
+      [['Быстров','Записал короткую инструкцию, отправил в чат заявки']]),
+    P('P-113','Дублируются строки в поступлении товаров','bug',[],
+      [['Постановщик','Проблема повторяется у двух пользователей с утра']])
+  ];
+  const extra=(prId,stage,rows)=>{
+    const pr=list.find(p=>p.id===prId);
+    rows.forEach(rw=>pr.subs.push({sid:'s'+(seq++), stage, who:rw[1], status:rw[2],
+      reactionMin:rw[3], spentH:rw[4], createdAt:Date.now()-12*H, title:rw[0]}));
+  };
+  const sp={'P-101':[[1,3],[2,5],[3,8]], 'P-092':[[1,2],[2,5],[3,8],[4,13],[5,5]],
+            'P-104':[[4,8]], 'P-088':[[4,5],[5,2],[6,1]], 'P-097':[[1,1],[2,3]], 'P-110':[[1,1]]};
+  list.forEach(pr=>{ (sp[pr.id]||[]).forEach(([stage,val])=>{
+    const x=pr.subs.find(s=>s.stage===stage); if(x){ x.sp=val; if(x.status==='work') x.pct=60; } }); });
+  const place={'P-101':['g1','s12',2],'P-092':['g2','s05',26],'P-104':['g1','s12',1],
+               'P-088':['g2','s05',70],'P-097':['g3','sw',9],'P-110':['g3','sw',120],'P-113':['g1','',0.5]};
+  list.forEach((pr,i)=>{ const v=place[pr.id];
+    if(v){ pr.groupId=v[0]; pr.sprintId=v[1]; pr.touchedAt=now-v[2]*H;
+           pr.subs.forEach(s=>{ s.createdAt=now-(v[2]+24)*H; }); }
+    pr.createdAt=now-(60-i*7)*24*H;
+  });
+  extra('P-092',4,[['Регистр накопления и движения','streltsov','done',12,70]]);
+  extra('P-101',3,[['Правила обмена с WMS','artimenko','work',25,5]]);
+  return list;
+}
+
+/* =====================  УТИЛИТЫ  ===================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const two=n=>String(n).padStart(2,'0');
+const dtime=ts=>{const d=new Date(ts);return two(d.getDate())+'.'+two(d.getMonth()+1)+'.'+d.getFullYear()+' '+two(d.getHours())+':'+two(d.getMinutes())+':'+two(d.getSeconds());};
+const ddate=ts=>{const d=new Date(ts);return two(d.getDate())+'.'+two(d.getMonth()+1)+'.'+d.getFullYear();};
+const toCsv=rows=>'\ufeff'+rows.map(r=>r.map(v=>{
+  const s=String(v==null?'':v).replace(/"/g,'""');
+  return /[";\n]/.test(s)?'"'+s+'"':s;
+}).join(';')).join('\r\n');
+function download(name, text, mime){
+  try{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([text],{type:(mime||'text/csv')+';charset=utf-8'}));
+    a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+    return true;
+  }catch(e){ toast('Скачивание недоступно: '+e.message); return false; }
+}
+/* цвета статусов задаются в настройках и живут в CSS-переменных */
+function shade(hex, k){
+  const m=/^#?([\da-f]{6})$/i.exec(String(hex||'')); if(!m) return 'var(--line)';
+  const n=parseInt(m[1],16), c=[(n>>16)&255,(n>>8)&255,n&255]
+    .map(v=>Math.max(0,Math.min(255,Math.round(v*k))));
+  return '#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function applyColors(){
+  const c=CONFIG.colors||{};
+  const set=(k,v)=>{ document.documentElement.style.setProperty('--c-'+k, v);
+                     document.documentElement.style.setProperty('--c-'+k+'-b', shade(v,.82)); };
+  set('new', c.new||'#FFFDF7'); set('work', c.work||'#FCF1BE'); set('done', c.done||'#E2F0DD');
+}
+
+/* Высота карточки заявки и шрифт карточек — тоже CSS-переменные, задаются в настройках */
+const CARD_FONTS=[
+  {id:'',                                          label:'как во всём приложении (Golos Text)'},
+  {id:'system-ui,-apple-system,"Segoe UI",sans-serif', label:'системный шрифт'},
+  {id:'"Segoe UI",Roboto,Arial,sans-serif',        label:'Segoe UI'},
+  {id:'Arial,Helvetica,sans-serif',                label:'Arial'},
+  {id:'Verdana,Geneva,sans-serif',                 label:'Verdana (широкий)'},
+  {id:'Georgia,"Times New Roman",serif',           label:'Georgia (с засечками)'},
+  {id:'"JetBrains Mono",Consolas,monospace',       label:'JetBrains Mono (моноширинный)'}
+];
+/* Шапка приложения переносится по строкам, поэтому её высоту меряем и отдаём в CSS:
+   доска занимает ровно остаток экрана и прокручивается внутри себя. */
+function syncTopGap(){
+  const h=document.querySelector('header.top');
+  if(!h) return;
+  document.documentElement.style.setProperty('--topgap', Math.round(h.getBoundingClientRect().height+4)+'px');
+}
+window.addEventListener('resize', syncTopGap);
+function applyView(){
+  const r=document.documentElement.style;
+  const h=Number(CONFIG.headH)||0;
+  r.setProperty('--laneh', h?h+'px':'96px');
+  r.setProperty('--headh', h?Math.max(30,h-24)+'px':'none');   // минус вертикальные поля карточки
+  r.setProperty('--card-fs', (Number(CONFIG.cardFs)||12)+'px');
+  r.setProperty('--card-ff', CONFIG.cardFf||'inherit');
+}
+
+/* =====================  ХОД РАБОТЫ  =====================
+   Живая панель в углу и строка состояния: видно, что именно приложение делает
+   сейчас и сколько это заняло. Каждый шаг попадает в журнал действий. */
+const Progress={
+  on:false, t0:0, title:'', items:[], hideT:null, modeWas:'',
+  el(){ return document.getElementById('progress'); },
+  mode(text){ const m=document.getElementById('mode'); if(m) m.textContent=text; },
+  start(title){
+    const m=document.getElementById('mode');
+    if(!this.on && m) this.modeWas=m.textContent;      // строку состояния вернём как было
+    this.on=true; this.t0=Date.now(); this.title=title; this.items=[];
+    clearTimeout(this.hideT);
+    Log.add('step','▶ '+title);
+    this.paint();
+    return this.t0;
+  },
+  step(text, extra){
+    const ms=Date.now()-this.t0;
+    Log.add('step', text, Object.assign({мс:ms}, extra||{}));
+    if(!this.on) return;
+    this.items.push({text, ms});
+    this.mode(text.length>44?text.slice(0,44)+'…':text);
+    this.paint();
+  },
+  done(text){
+    const sec=Math.round((Date.now()-this.t0)/100)/10;
+    Log.add('step','■ '+this.title+': '+(text||'готово')+' за '+sec+' с');
+    if(!this.on) return;
+    this.items.push({text:'Готово: '+(text||''), ms:Date.now()-this.t0, last:true});
+    this.paint(sec);
+    this.on=false;
+    if(this.modeWas) this.mode(this.modeWas);
+    clearTimeout(this.hideT);
+    this.hideT=setTimeout(()=>{ const e=this.el(); if(e){ e.hidden=true; e.innerHTML=''; } }, 6000);
+  },
+  fail(msg){
+    Log.add('error', this.title+' — сбой: '+msg);
+    if(this.on){ this.items.push({text:'Ошибка: '+msg, ms:Date.now()-this.t0, last:true}); this.paint(); }
+    this.on=false;
+    if(this.modeWas) this.mode(this.modeWas);
+    clearTimeout(this.hideT);
+    this.hideT=setTimeout(()=>{ const e=this.el(); if(e){ e.hidden=true; e.innerHTML=''; } }, 9000);
+  },
+  paint(sec){
+    const e=this.el(); if(!e) return;
+    const last=this.items.slice(-9);
+    e.hidden=false;
+    e.innerHTML='<h6>'+esc(this.title)+'</h6><ol>'
+      + last.map((it,i)=>'<li class="'+(i===last.length-1?'cur':'')+'"><span>'+esc(it.text)
+        +'</span><span class="ms">'+it.ms+' мс</span></li>').join('')
+      + '</ol>'
+      + (sec!=null?'<div class="tot">Всего '+sec+' с</div>':'');
+  }
+};
+/* типовая форма задачи Битрикс24: слайдер внутри портала, вкладка — снаружи */
+function openTaskForm(bxId, title){
+  if(!bxId){ toast('Задача ещё не создана в портале'); return false; }
+  const uid=(state.me&&state.me.bxId)||1;
+  const path='/company/personal/user/'+uid+'/tasks/task/view/'+bxId+'/';
+  Log.add('view','Открыта типовая форма задачи #'+bxId, {название:title||''});
+  const openTab=()=>{
+    let domain=''; try{ domain=window.BX24&&BX24.getDomain?BX24.getDomain():''; }catch(e){}
+    if(domain) window.open('https://'+domain+path,'_blank');
+    else toast('Вне портала форму задачи не открыть');
+  };
+  try{
+    if(window.BX24 && BX24.openPath){
+      BX24.openPath(path, r=>{ if(r && r.result==='error') openTab(); });
+      return true;
+    }
+  }catch(e){ Log.add('error','Не удалось открыть форму задачи: '+e.message,{задача:bxId}); }
+  openTab();
+  return true;
+}
+const roster=()=>(state.live&&state.users.length?state.users:TEAM);
+const person=id=>TEAM.find(t=>t.id===id)||state.users.find(u=>u.id===id)||{name:'Не назначен',role:''};
+const GROUPS=[
+  {id:'none',     label:'без группировки'},
+  {id:'sp',       label:'по сумме сторипоинтов'},
+  {id:'sprint',   label:'по спринту'},
+  {id:'cat',      label:'по категории проблемы'},
+  {id:'who',      label:'по исполнителю текущего этапа'}
+];
+function groupKey(pr){
+  switch(CONFIG.groupBy){
+    case 'sp':     { const v=spPlan(pr); return v?String(v):'—'; }
+    case 'sprint': return pr.sprintId?String(pr.sprintId):'—';
+    case 'cat':    return pr.cat||'—';
+    case 'who':    { const cur=currentStage(pr);
+                     const a=pr.subs.find(x=>x.stage===cur && x.status!=='done');
+                     return a?a.who:'—'; }
+    default: return '';
+  }
+}
+function groupTitle(key, list){
+  const s=spStats(list), n=list.length;
+  const head = CONFIG.groupBy==='sp'     ? (key==='—'?'Без оценки':'Оценка '+key+' СП')
+             : CONFIG.groupBy==='sprint' ? (key==='—'?'Бэклог, вне спринта':sprintName(key))
+             : CONFIG.groupBy==='cat'    ? catOfCode(key).label
+             : CONFIG.groupBy==='who'    ? (key==='—'?'Исполнитель не назначен':person(key).name)
+             : '';
+  return head+' — заявок '+n+', сторипоинтов '+s.total+' из '+s.plan;
+}
+function groupProblems(list){
+  if(CONFIG.groupBy==='none') return [{key:'', list}];
+  const map=new Map();
+  list.forEach(pr=>{ const k=groupKey(pr); if(!map.has(k)) map.set(k,[]); map.get(k).push(pr); });
+  const groups=[...map.entries()].map(([key,list])=>({key,list}));
+  if(CONFIG.groupBy==='sp')
+    groups.sort((a,b)=>(Number(b.key)||-1)-(Number(a.key)||-1));           // тяжёлые сверху
+  else
+    groups.sort((a,b)=>b.list.length-a.list.length);
+  return groups;
+}
+const SORTS=[
+  {id:'name',     label:'по наименованию'},
+  {id:'sp',       label:'по сумме сторипоинтов'},
+  {id:'date',     label:'по дате создания'},
+  {id:'activity', label:'по активности'}
+];
+/* подпись направления зависит от того, что сортируем */
+const sortDirLabel=()=>CONFIG.sort==='name' ? (CONFIG.sortDir==='asc'?'А → Я':'Я → А')
+  : CONFIG.sort==='sp' ? (CONFIG.sortDir==='desc'?'сначала тяжёлые':'сначала лёгкие')
+  : (CONFIG.sortDir==='desc'?'сначала свежие':'сначала давние');
+/* Сторипоинты.
+   Завершённые задачи считаются целиком, незавершённые — СП × процент завершённости.
+   Процент берётся из пользовательского поля; если оно пустое, работает запасное правило. */
+const spOf=x=>Number(x.sp||0);
+function pctOf(x, pr){
+  if(x.pct!=null && x.pct!=='') return Math.max(0, Math.min(100, Number(x.pct)));
+  if(CONFIG.pctFallback!=='stages') return 0;
+  if(x.status) return x.status==='done'?100:(x.status==='work'?50:0);
+  return pr?progress(pr).pct:0;                       // заявка целиком — по закрытым этапам
+}
+/* Сумма по заявке = оценка самой заявки + сумма оценок подчинённых задач */
+function spUnits(pr){
+  const units=[];
+  if(spOf(pr)>0) units.push({sp:spOf(pr), done:isSolved(pr), pct:pctOf(pr,pr), label:pr.title, own:true});
+  pr.subs.filter(x=>spOf(x)>0).forEach(x=>units.push({sp:spOf(x), done:x.status==='done',
+    pct:pctOf(x,pr), label:x.title||STAGES[x.stage].name}));
+  return units;
+}
+const spPlan=pr=>spUnits(pr).reduce((a,u)=>a+u.sp,0);
+function spStats(list){
+  let done=0, open=0, plan=0, counted=0;
+  list.forEach(pr=>spUnits(pr).forEach(u=>{
+    plan+=u.sp; counted++;
+    if(u.done) done+=u.sp; else open+=u.sp*u.pct/100;
+  }));
+  const r=v=>Math.round(v*10)/10;
+  return {done:r(done), open:r(open), total:r(done+open), plan:r(plan), counted};
+}
+const lastActivity=pr=>Math.max(pr.touchedAt||0, pr.createdAt||0,
+  ...pr.subs.map(s=>Math.max(s.touchedAt||0, s.createdAt||0)));
+function sortProblems(list){
+  const dir=CONFIG.sortDir==='asc'?1:-1;
+  return list.slice().sort((a,b)=>{
+    if(CONFIG.sort==='name') return a.title.localeCompare(b.title,'ru')*dir;
+    if(CONFIG.sort==='sp'){
+      const d=(spPlan(a)-spPlan(b))*dir;
+      return d||a.title.localeCompare(b.title,'ru');
+    }
+    const k=CONFIG.sort==='date'?(p=>p.createdAt||0):lastActivity;
+    return (k(a)-k(b))*dir;
+  });
+}
+/* сумма сторипоинтов по каждой стадии — выводится в шапку колонки */
+function stageSpStats(list){
+  const out={};
+  STAGES.forEach(s=>{ out[s.id]={plan:0, done:0, open:0, count:0, tasks:0}; });
+  (list||[]).forEach(pr=>pr.subs.forEach(x=>{
+    const o=out[x.stage]; if(!o) return;
+    o.tasks++;
+    const sp=spOf(x); if(!sp) return;
+    o.plan+=sp; o.count++;
+    if(x.status==='done') o.done+=sp; else o.open+=sp*pctOf(x,pr)/100;
+  }));
+  const r=v=>Math.round(v*10)/10;
+  Object.values(out).forEach(o=>{ o.plan=r(o.plan); o.done=r(o.done); o.open=r(o.open); o.total=r(o.done+o.open); });
+  return out;
+}
+const touch=pr=>{ pr.touchedAt=Date.now(); };
+const isScrum=id=>{const g=state.projects.find(p=>String(p.id)===String(id));return g?!!g.scrum:null;};
+const projectName=id=>{const g=state.projects.find(p=>String(p.id)===String(id));return g?g.name:'вне проекта';};
+const sprintName=id=>{const s=state.sprints.find(x=>String(x.id)===String(id));return s?s.name:'бэклог';};
+const catOfCode=c=>CATEGORIES[c]||CATEGORIES[Object.keys(CATEGORIES)[0]]||{label:'—',route:[],cls:'',mode:'manual',assignees:{}};
+const short=n=>n.split(' ')[1]||n;
+const routeOf=pr=>(catOfCode(pr.cat).route||[]);
+const hours=h=>h<1?Math.round(h*60)+' мин':(Math.round(h*10)/10)+' ч';
+const byId=id=>state.problems.find(p=>p.id===id);
+
+/* закрашиваются ТОЛЬКО завершённые подзадачи */
+const stageTasks=(pr,s)=>pr.subs.filter(x=>x.stage===s);
+const stageDone=(pr,s)=>{const i=stageTasks(pr,s);return i.length>0 && i.every(x=>x.status==='done');};
+const statusRu=x=>x.status==='done'?'завершена':(x.status==='work'?'в работе':'создана');
+const candidates=stage=>{
+  if(state.live&&state.users.length) return state.users;
+  const c=TEAM.filter(t=>t.stages.includes(stage));
+  return c.length?c:TEAM;
+};
+const missingStages=pr=>routeOf(pr).filter(sid=>!pr.subs.some(x=>x.stage===sid));
+const autoMode=pr=>CONFIG.autoCreateRoute && catOfCode(pr.cat).mode!=='manual';
+function progress(pr){
+  const r=routeOf(pr), done=r.filter(s=>stageDone(pr,s)).length;
+  return {done, total:r.length, pct:r.length?Math.round(done/r.length*100):0};
+}
+function currentStage(pr){
+  const r=routeOf(pr);
+  const work=pr.subs.find(x=>x.status!=='done' && r.includes(x.stage));
+  if(work) return work.stage;
+  const next=r.find(s=>!stageDone(pr,s));
+  return next===undefined?7:next;
+}
+const isSolved=pr=>{const p=progress(pr);return p.total>0&&p.done===p.total;};
+const spentOf=pr=>pr.subs.reduce((a,s)=>a+(s.spentH||0),0);
+function normFor(pr){ return routeOf(pr).reduce((a,s)=>a+STAGES[s].normMax,0); }
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.appendChild(e);setTimeout(()=>e.remove(),2600);}
+
+/* =====================  ДОСКА  ===================== */
+/* текущий отбор — один на доску, список и журнал */
+function filtered(){
+  return state.problems.filter(pr=>{
+    const okQ=!state.q||(pr.title+' '+pr.id).toLowerCase().includes(state.q.toLowerCase());
+    const okU=!state.user||pr.subs.some(s=>s.who===state.user);
+    const okG=!state.group||String(pr.groupId||'')===String(state.group);
+    const okS=!state.sprint||inSprint(pr,state.sprint);
+    return okQ&&okU&&okG&&okS;
+  });
+}
+/* заявка попадает в спринт и сама, и если в нём стоит любая её подзадача */
+function inSprint(pr, sp){
+  if(sp==='__backlog') return !pr.sprintId && !pr.subs.some(s=>s.sprintId);
+  return String(pr.sprintId||'')===String(sp) || pr.subs.some(s=>String(s.sprintId||'')===String(sp));
+}
+function filterText(){
+  const p=[];
+  p.push('проект: '+(state.group?projectName(state.group):'все'));
+  p.push('спринт: '+(state.sprint?(state.sprint==='__backlog'?'бэклог':sprintName(state.sprint)):'все'));
+  if(state.user) p.push('исполнитель: '+person(state.user).name);
+  if(state.q) p.push('поиск: '+state.q);
+  return p.join(' · ');
+}
+
+function renderBoard(){
+  const list=filtered();
+  const sorted=sortProblems(list);
+  const work=sorted.filter(pr=>!isSolved(pr)), solved=sorted.filter(isSolved);
+  if(state.loading && !state.problems.length){
+    $('#app').innerHTML='<div class="empty">Загружаю задачи портала…</div>';
+    return;
+  }
+
+  const stSp=stageSpStats(list);
+  const spAll=spStats(list);
+  const comp=CONFIG.headerMode==='compact';
+  const head=`<div class="mrow mhead ${comp?'compact':''}">
+    <div class="cell stick"><div class="sh"><h3>Заявка пользователя</h3></div>
+      <div class="sh-res">Проблема словами заказчика</div>
+      <div class="sh-sp ${spAll.plan?'':'zero'}" title="Сторипоинты по всему отбору">Σ СП <b>${spAll.plan}</b>${spAll.plan?` · готово <b>${spAll.total}</b>`:''}</div>
+      <button class="headtog" id="headerToggle" title="Свернуть или развернуть шапку колонок">${comp?'развернуть шапку':'свернуть шапку'}</button></div>
+    ${STAGES.slice(1,7).map(s=>{
+      const o=stSp[s.id]||{plan:0,done:0,open:0,total:0,count:0,tasks:0};
+      return `<div class="cell">
+      <div class="sh"><span class="step-no">${s.no}</span><h3>${esc(s.name)}</h3></div>
+      <div class="sh-res">${esc(s.result)}</div>
+      <div class="sh-norm mono">${hours(s.normMin)} – ${hours(s.normMax)}</div>
+      <div class="sh-sp ${o.plan?'':'zero'}"
+        title="Задач на этапе: ${o.tasks}, из них с оценкой ${o.count}. Завершённые ${o.done} СП, незавершённые ${o.open} СП">
+        СП <b>${o.plan}</b>${o.plan?` · готово <b>${o.total}</b>`:' · нет оценок'}</div>
+    </div>`;}).join('')}
+  </div>`;
+
+  const table=rows=>`<div class="mtable">${rows}</div>`;
+  const groups=groupProblems(work);
+  const body=(work.length
+      ? groups.map(g=>(g.key===''?'':`<div class="group-title">${esc(groupTitle(g.key,g.list))}</div>`)
+                      +table(g.list.map(lane).join(''))).join('')
+      : `<div class="empty">Нет проблем в работе. Нажмите «Новая заявка».</div>`)
+    +(solved.length?`<div class="group-title">Решены — все этапы маршрута завершены</div>`+table(solved.map(lane).join('')):'');
+
+  const sp=spStats(list);
+  const spBar=sp.counted?`<div class="spbar">
+      <span>Сторипоинты по отбору</span>
+      <b class="mono">${sp.total}</b>
+      <span>= завершённые <b class="mono">${sp.done}</b> + незавершённые <b class="mono">${sp.open}</b></span>
+      <span class="dim">план ${sp.plan} · задач с оценкой ${sp.counted} · ${sp.plan?Math.round(sp.total/sp.plan*100):0}% выполнено</span>
+    </div>`:`<div class="spbar dim">Сторипоинты не проставлены: задайте оценку в карточке заявки или укажите поле в настройках</div>`;
+
+  $('#app').innerHTML=`<div class="matrix">${spBar}${head}${body}</div>`;
+  syncTopGap();
+  const ht=$('#headerToggle');
+  if(ht) ht.addEventListener('click',()=>{
+    CONFIG.headerMode = CONFIG.headerMode==='compact'?'full':'compact';
+    Store.write();
+    Log.add('view','Шапка колонок: '+(CONFIG.headerMode==='compact'?'свёрнутая':'подробная'));
+    renderBoard();
+  });
+  wire();
+}
+
+/* строка = заявка пользователя, ячейка = задачи этой стадии */
+function lane(pr){
+  const r=routeOf(pr);
+  const cells=STAGES.slice(1,7).map(s=>{
+    if(!r.includes(s.id)) return `<div class="cell off"><span>не входит в маршрут</span></div>`;
+    const items=pr.subs.filter(x=>x.stage===s.id);
+    return `<div class="cell" data-cell="${pr.id}" data-stage="${s.id}">
+      ${items.map(x=>taskCard(pr,x,s)).join('')}
+      <button class="addbtn" data-add="${pr.id}" data-stage="${s.id}">+ подзадача${items.length?' ещё':''}</button>
+    </div>`;
+  }).join('');
+
+  return `<div class="lane" data-pr="${pr.id}"><div class="mrow">
+    <div class="cell stick lane-head">${headCard(pr)}</div>
+    ${cells}
+  </div></div>`;
+}
+
+/* Состав карточки заявки задаётся на вкладке «Настройки» */
+function headCard(pr){
+  return '<div class="hcbox">'+headCardBody(pr)+'</div>';
+}
+function headCardBody(pr){
+  if(CONFIG.headMode==='compact')
+    return `<h4 data-open="${pr.id}" style="margin:0">${esc(pr.title)}</h4>`;
+  const has=f=>CONFIG.headFields.includes(f);
+  const r=routeOf(pr), cur=currentStage(pr), pg=progress(pr), out=[];
+  if(has('id')) out.push(`<div class="id">${esc(pr.id)}${pr.bxId?' \u00b7 #'+pr.bxId:''}</div>`);
+  out.push(`<h4 data-task="${pr.bxId||''}" data-pr="${pr.id}" title="Открыть типовую форму задачи">${esc(pr.title)}</h4>`);
+  out.push(`<button class="linkbtn" data-open="${pr.id}">маршрут и подзадачи</button>`);
+  if(has('cat')) out.push(`<span class="chip ${catOfCode(pr.cat).cls}">${esc(catOfCode(pr.cat).label)}</span>`);
+  if(has('minibar')) out.push(`<div class="minibar">${STAGES.slice(1,7).map(s=>{
+    const cls=!r.includes(s.id)?'skip':(stageDone(pr,s.id)?'done':(s.id===cur?'current':''));
+    return `<i class="${cls}" title="${esc(s.name)}"></i>`;}).join('')}</div>`);
+  const lines=[];
+  if(has('progress')) lines.push(`Завершено <b>${pg.done}/${pg.total}</b> этапов \u00b7 <b>${pg.pct}%</b>`);
+  if(has('current'))  lines.push(`Сейчас: ${esc(STAGES[cur].name)}`);
+  if(has('who')){
+    const act=[...new Set(pr.subs.filter(x=>x.stage===cur && x.status!=='done').map(x=>short(person(x.who).name)))];
+    lines.push(`Исполнитель: ${act.length?esc(act.join(', ')):'\u2014'}`);
+  }
+  if(has('effort')) lines.push(`Труд <b class="mono">${hours(spentOf(pr))}</b> из <span class="mono">${hours(normFor(pr))}</span>`);
+  if(has('sp')){
+    const s=spStats([pr]);
+    lines.push(s.counted?`СП <b class="mono">${s.total}</b> из ${s.plan} · завершено ${s.done}`:'СП не проставлены');
+  }
+  if(has('project')) lines.push(`Проект: ${esc(projectName(pr.groupId))}`);
+  if(has('sprint'))  lines.push(`Спринт: ${esc(sprintName(pr.sprintId))}`);
+  if(has('count'))  lines.push(`Подзадач <b class="mono">${pr.subs.length}</b>, закрыто ${pr.subs.filter(x=>x.status==='done').length}`);
+  if(has('age'))    lines.push(`В работе <b class="mono">${Math.max(1,Math.round((Date.now()-pr.createdAt)/(24*H)))}</b> дн.`);
+  if(has('lastmsg') && pr.chat.length){
+    const m=pr.chat[pr.chat.length-1];
+    lines.push(`<span style="font-style:italic">${esc(m[0])}: ${esc(m[1].length>58?m[1].slice(0,58)+'\u2026':m[1])}</span>`);
+  }
+  if(CONFIG.cardType==='custom' && (CONFIG.cardFields||[]).length){
+    CONFIG.cardFields.forEach(f=>{
+      const v=fieldValue(pr,f);
+      if(v!=='') lines.push(esc(fieldLabel(f))+': <b>'+esc(v)+'</b>');
+    });
+  }
+  if(lines.length) out.push(`<div class="prog">${lines.join('<br>')}</div>`);
+  if(has('ensure') && missingStages(pr).length)
+    out.push(`<button class="btn small ghost" style="margin-top:8px" data-ensure="${pr.id}">${autoMode(pr)?'Создать подзадачи':'Создать вручную'}: ${missingStages(pr).length}</button>`);
+  return out.join('');
+}
+
+function taskCard(pr,x,s){
+  const who=person(x.who), cls=x.status;   // new | work | done — цвет задаётся в настройках
+  return `<div class="scard ${cls}" draggable="true" data-sid="${x.sid}" data-pr="${pr.id}"
+       data-task="${x.bxId||''}" title="Открыть типовую форму задачи">
+    <div class="t">${esc(x.title||s.name)}</div>
+    <div class="m">
+      <select class="who-sel" data-who="${x.sid}" data-pr="${pr.id}" ${x.status==='done'?'disabled':''}>
+        ${candidates(x.stage).map(c=>`<option value="${c.id}" ${c.id===x.who?'selected':''}>${esc(short(c.name))}</option>`).join('')}
+      </select> · ${statusRu(x)}</div>
+    <div class="m">Реакция ${x.reactionMin!=null?x.reactionMin+' мин':'—'} · труд <span class="mono">${hours(x.spentH||0)}</span></div>
+    ${spOf(x)?`<div class="m">СП <b class="mono">${spOf(x)}</b>${x.status==='done'?' · зачтено полностью':' · готово '+pctOf(x,pr)+'% → <b class="mono">'+(Math.round(spOf(x)*pctOf(x,pr)/10)/10)+'</b>'}</div>`:''}
+    <div class="acts">
+      ${x.status==='new'?`<button class="btn small ghost" data-start="${x.sid}" data-pr="${pr.id}">Начал</button>`:''}
+      ${x.status!=='done'?`<button class="btn small" data-finish="${x.sid}" data-pr="${pr.id}">Завершил</button>`:''}
+    </div>
+  </div>`;
+}
+
+/* =====================  ДЕЙСТВИЯ  ===================== */
+async function addSub(prId, stage, title, quiet){
+  const pr=byId(prId); if(!pr) return;
+  if(!routeOf(pr).includes(stage)){ toast('Этап вне маршрута категории «'+catOfCode(pr.cat).label+'»'); return; }
+  const cat = catOfCode(pr.cat);
+  let who = cat.assignees[stage] || (TEAM.find(t=>t.stages.includes(stage))||{id:'galkina'}).id;
+  if(state.live && !state.users.some(u=>u.id===who))
+    who = (state.me && state.me.id) || (state.users[0]&&state.users[0].id) || who;
+  const s=STAGES[stage];
+  const x={sid:'s'+(seq++), stage, who, status:'new', reactionMin:null, spentH:0,
+           createdAt:Date.now(), title:title||null};
+  pr.subs.push(x);
+  pr.chat.push(['Система','Создана подзадача «'+(title||'Этап '+s.no+'. '+s.name)+'» на исполнителе '+person(who).name]);
+  touch(pr);
+  if(state.live && pr.bxId){
+    try{
+      const r=await BX.addSubtask(pr.bxId, title || `Этап ${s.no}. ${s.name} — ${pr.title}`, state.map[who], s.normMax, stage, pr.cat, pr.groupId||state.group, pr.sprintId);
+      x.bxId=r.task.id;
+      await BX.setMarker(pr, {stage, cat:pr.cat});
+      await BX.comment(pr.bxId, `Создана подзадача «${title || 'Этап '+s.no+'. '+s.name}»`);
+    }catch(e){ toast('Битрикс24: '+e.message); }
+  }
+  Log.add('task','Создана подзадача «'+(title||('Этап '+s.no+'. '+s.name))+'» на исполнителе '+person(who).name,
+          {проблема:pr.id, этап:s.no, задача:x.bxId||x.sid});
+  if(!quiet){ render(); toast('Подзадача создана: этап '+s.no); }
+  return x;
+}
+
+/* на каждый этап маршрута — своя подзадача на исполнителе */
+async function ensureRoute(prId, quiet){
+  const pr=byId(prId); if(!pr) return 0;
+  const miss=missingStages(pr);
+  for(const sid of miss) await addSub(prId, sid, null, true);
+  if(miss.length){
+    pr.chat.push(['Система','Маршрут разложен на подзадачи: '+miss.map(s=>'этап '+STAGES[s].no).join(', ')]);
+    Log.add('route','Маршрут разложен на подзадачи: '+miss.map(s=>'этап '+STAGES[s].no).join(', '),
+            {проблема:pr.id, категория:catOfCode(pr.cat).label, режим:autoMode(pr)?'автоматически':'вручную'});
+    render(); if(!quiet) toast('Создано подзадач: '+miss.length);
+  }
+  return miss.length;
+}
+
+async function setWho(prId,sid,who){
+  const pr=byId(prId), x=pr&&pr.subs.find(v=>v.sid===sid); if(!x) return;
+  x.who=who; x.touchedAt=Date.now(); touch(pr);
+  pr.chat.push(['Система','Этап '+STAGES[x.stage].no+' назначен на '+person(who).name]);
+  Log.add('task','Смена исполнителя: этап '+STAGES[x.stage].no+' → '+person(who).name, {проблема:pr.id});
+  if(state.live && x.bxId){ try{ await BX.setResponsible(x.bxId, state.map[who]); }catch(e){ toast('Битрикс24: '+e.message); } }
+  render();
+}
+
+async function finishSub(prId,sid){
+  const pr=byId(prId), x=pr&&pr.subs.find(v=>v.sid===sid); if(!x) return;
+  x.status='done'; x.touchedAt=Date.now(); touch(pr);
+  pr.chat.push([person(x.who).name,'Завершил подзадачу «'+(x.title||STAGES[x.stage].name)+'»']);
+  Log.add('task','Завершена подзадача «'+(x.title||STAGES[x.stage].name)+'»',
+          {проблема:pr.id, этап:STAGES[x.stage].no, исполнитель:person(x.who).name, труд:hours(x.spentH||0)});
+  if(state.live && x.bxId){ try{ await BX.complete(x.bxId); }catch(e){ toast('Битрикс24: '+e.message); } }
+  render();
+  const pg=progress(pr);
+  toast(pg.done===pg.total ? pr.id+' — все подзадачи завершены' : 'Полоска закрашена на '+pg.pct+'%');
+}
+async function startSub(prId,sid){
+  const pr=byId(prId), x=pr&&pr.subs.find(v=>v.sid===sid); if(!x) return;
+  x.status='work'; x.touchedAt=Date.now(); touch(pr);
+  if(x.reactionMin==null) x.reactionMin=Math.round((Date.now()-x.createdAt)/60000);
+  Log.add('task','Начата работа: «'+(x.title||STAGES[x.stage].name)+'»',
+          {проблема:pr.id, этап:STAGES[x.stage].no, реакция:x.reactionMin+' мин'});
+  if(state.live && x.bxId){ try{ await BX.start(x.bxId); }catch(e){ Log.add('error','Не удалось перевести задачу в работу: '+e.message,{задача:x.bxId}); } }
+  render();
+}
+async function moveSub(prId,sid,stage){
+  const pr=byId(prId), x=pr&&pr.subs.find(v=>v.sid===sid); if(!x||x.stage===stage) return;
+  if(!routeOf(pr).includes(stage)){ toast('Этап вне маршрута категории'); return; }
+  const from=x.stage; x.stage=stage; x.touchedAt=Date.now(); touch(pr);
+  pr.chat.push(['Система','Подзадача перенесена: '+STAGES[from].name+' → '+STAGES[stage].name]);
+  Log.add('task','Подзадача перенесена: '+STAGES[from].name+' → '+STAGES[stage].name, {проблема:pr.id});
+  if(state.live && x.bxId){ try{ await BX.setMarker({bxId:x.bxId, xmlId:x.xmlId}, {stage, cat:pr.cat}); }catch(e){ toast('Битрикс24: '+e.message); } }
+  render();
+}
+
+function wire(){
+  document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();openDrawer(b.dataset.open);}));
+  document.querySelectorAll('h4[data-task]').forEach(h=>h.addEventListener('click',e=>{
+    e.stopPropagation();
+    const pr=byId(h.dataset.pr);
+    if(h.dataset.task) openTaskForm(h.dataset.task, pr&&pr.title);
+    else openDrawer(h.dataset.pr);           // демо-режим: задачи в портале ещё нет
+  }));
+  document.querySelectorAll('.scard[data-task]').forEach(c=>c.addEventListener('click',e=>{
+    if(e.target.closest('button, select, input')) return;
+    const pr=byId(c.dataset.pr), x=pr&&pr.subs.find(v=>v.sid===c.dataset.sid);
+    if(c.dataset.task) openTaskForm(c.dataset.task, x&&(x.title||STAGES[x.stage].name));
+    else toast('Демо-режим: задачи в портале нет');
+  }));
+  document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation();
+    const stage=Number(b.dataset.stage), pr=byId(b.dataset.add);
+    const has=pr.subs.some(x=>x.stage===stage);
+    const nm=has?prompt('Название дополнительной подзадачи на этапе '+STAGES[stage].no+':',
+                        STAGES[stage].name+' — доработка'):null;
+    if(has && !nm) return;
+    addSub(b.dataset.add, stage, null, nm);
+  }));
+  document.querySelectorAll('[data-ensure]').forEach(b=>b.addEventListener('click',e=>{
+    e.stopPropagation(); ensureRoute(b.dataset.ensure);
+  }));
+  document.querySelectorAll('[data-finish]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();finishSub(b.dataset.pr,b.dataset.finish);}));
+  document.querySelectorAll('[data-start]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();startSub(b.dataset.pr,b.dataset.start);}));
+  document.querySelectorAll('.who-sel').forEach(sel=>{
+    sel.addEventListener('mousedown',e=>e.stopPropagation());
+    sel.addEventListener('change',e=>setWho(sel.dataset.pr, sel.dataset.who, e.target.value));
+  });
+
+  let drag=null;
+  document.querySelectorAll('.scard').forEach(el=>{
+    el.addEventListener('dragstart',e=>{drag={pr:el.dataset.pr,sid:el.dataset.sid};el.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+    el.addEventListener('dragend',()=>{el.classList.remove('dragging');drag=null;});
+  });
+  document.querySelectorAll('[data-cell]').forEach(z=>{
+    z.addEventListener('dragover',e=>{ if(!drag||drag.pr!==z.dataset.cell) return; e.preventDefault(); z.classList.add('drop-ok'); });
+    z.addEventListener('dragleave',()=>z.classList.remove('drop-ok'));
+    z.addEventListener('drop',e=>{
+      e.preventDefault(); z.classList.remove('drop-ok');
+      if(drag && drag.pr===z.dataset.cell) moveSub(drag.pr, drag.sid, Number(z.dataset.stage));
+      drag=null;
+    });
+  });
+}
+
+/* =====================  ВЫГРУЗКА СТРУКТУРЫ ПОРТАЛА  =====================
+   Собирает то, что реально доступно приложению с его правами: поля задач,
+   пользовательские поля, образец задачи, скрам-методы, проекты, спринты. */
+async function collectStructure(onStep){
+  const raw={}, out=[];
+  const line=s=>out.push(s==null?'':String(s));
+  const sec=title=>{ line(''); line('='.repeat(78)); line(title); line('='.repeat(78)); };
+  const probe=async(method, params)=>{
+    if(onStep) onStep(method);
+    if(!BX.ready){ raw[method]={__error:'вне портала'}; return {__error:'вне портала'}; }
+    try{
+      const d=await BX.call(method, params||{});
+      raw[method]=d; Log.add('probe','Структура: '+method+' — получено'); return d;
+    }catch(e){
+      raw[method]={__error:e.message}; Log.add('error','Структура: '+method+' — '+e.message);
+      return {__error:e.message};
+    }
+  };
+  const errOf=d=>d&&d.__error?d.__error:null;
+  const val=v=>{ const s=typeof v==='object'&&v!==null?JSON.stringify(v):String(v);
+                 return s.length>90?s.slice(0,90)+'…':s; };
+
+  let domain=''; try{ domain=BX24.getDomain?BX24.getDomain():''; }catch(e){}
+
+  line('СТРУКТУРА ДАННЫХ БИТРИКС24 — ЗАДАЧИ И СКРАМ');
+  line('портал: '+(domain||'—'));
+  line('дата: '+dtime(Date.now()));
+  line('приложение: Маршрут проблемы (регламент отдела разработки 1С)');
+  line('отбор на момент выгрузки: '+filterText());
+  line('');
+  line('Файл собран запросами к самому порталу, а не по документации:');
+  line('здесь то, что доступно приложению с его правами.');
+
+  /* --- поля задачи --- */
+  const f=await probe('tasks.task.getFields');
+  sec('ПОЛЯ ЗАДАЧИ (tasks.task.getFields)');
+  if(errOf(f)) line('недоступно: '+errOf(f));
+  else{
+    const fields=f.fields||f;
+    const names=Object.keys(fields);
+    line('всего полей: '+names.length);
+    line('');
+    line('ПОЛЕ'.padEnd(28)+'ТИП'.padEnd(14)+'ОБЯЗ.'.padEnd(7)+'ТОЛЬКО ЧТ.'.padEnd(12)+'ЗАГОЛОВОК');
+    line('-'.repeat(100));
+    names.sort().forEach(n=>{
+      const d=fields[n]||{};
+      line(String(n).padEnd(28)+String(d.type||'—').padEnd(14)
+        +(d.required?'да':'—').padEnd(7)+(d.readOnly||d.isReadOnly?'да':'—').padEnd(12)+String(d.title||''));
+    });
+    const need=['SPRINT_ID','STAGE_ID','XML_ID','PARENT_ID','GROUP_ID','TAGS','TIME_SPENT_IN_LOGS'];
+    line('');
+    line('нужные приложению: '+need.map(n=>n+(names.includes(n)?' есть':' НЕТ')).join(', '));
+  }
+
+  /* --- пользовательские поля --- */
+  const uf=await probe('task.item.userfield.getlist');
+  sec('ПОЛЬЗОВАТЕЛЬСКИЕ ПОЛЯ ЗАДАЧ (task.item.userfield.getlist)');
+  if(errOf(uf)) line('недоступно: '+errOf(uf));
+  else{
+    const arr=BX.toArray(uf);
+    line('полей: '+arr.length);
+    arr.forEach(u=>line('  '+(u.FIELD_NAME||u.fieldName||'?')+' — тип '+(u.USER_TYPE_ID||u.userTypeId||'?')
+      +', множественное: '+((u.MULTIPLE||u.multiple)==='Y'?'да':'—')+', ID '+(u.ID||u.id||'?')));
+    line('');
+    line('поле сторипоинтов в настройках: '+(CONFIG.spField||'не задано, используется метка в XML_ID'));
+    line('поле процента готовности: '+(CONFIG.pctField||'не задано, используется метка в XML_ID'));
+  }
+
+  /* --- образец задачи --- */
+  const one=await probe('tasks.task.list',{filter:state.group?{GROUP_ID:Number(state.group)}:{}, select:taskSelect(), start:0});
+  sec('ОБРАЗЕЦ ЗАДАЧИ: ЧТО ИМЕННО ПРИСЛАЛ ПОРТАЛ');
+  if(errOf(one)) line('недоступно: '+errOf(one));
+  else{
+    const arr=BX.toArray(one), sample=arr[0];
+    line('получено в ответе: '+arr.length+' задач'+(state.group?' (проект '+projectName(state.group)+')':''));
+    if(!sample) line('задач нет — показать нечего');
+    else{
+      line('задача #'+sample.id+', полей в ответе: '+Object.keys(sample).length);
+      line('');
+      line('ИМЯ В ОТВЕТЕ'.padEnd(30)+'ЗНАЧЕНИЕ');
+      line('-'.repeat(100));
+      Object.keys(sample).sort().forEach(k=>line(String(k).padEnd(30)+val(sample[k])));
+    }
+  }
+
+  /* --- скрам --- */
+  sec('СКРАМ: КАКИЕ МЕТОДЫ ОТВЕЧАЮТ');
+  const gid=state.group?Number(state.group):0;
+  const scrum=[
+    ['tasks.api.scrum.sprint.list',{filter:{groupId:gid}}],
+    ['tasks.api.scrum.backlog.get',{id:gid}],
+    ['tasks.api.scrum.item.list',{filter:{entityId:0}}],
+    ['tasks.api.scrum.kanban.getFields',{}],
+    ['tasks.api.scrum.task.getFields',{}],
+    ['tasks.api.scrum.epic.list',{filter:{groupId:gid}}]
+  ];
+  for(const [m,pms] of scrum){
+    const r=await probe(m,pms);
+    const e=errOf(r);
+    line(m.padEnd(38)+(e?('НЕТ: '+e):('есть, записей: '+BX.toArray(r).length)));
+  }
+  line('');
+  line('проект для проверки: '+(state.group?projectName(state.group)+' (ID '+state.group+')':'не выбран, часть методов вернёт пусто'));
+  line('спринты, известные приложению: '+(state.sprints.length
+    ? state.sprints.map(s=>s.name+' [ID '+s.id+', проект '+s.groupId+']').join('; ') : 'нет'));
+  line('спринты из самих задач (поле sprintId): '
+    +[...new Set(state.problems.map(p=>p.sprintId).filter(Boolean))].join(', ')||'—');
+
+  /* --- проекты и пользователь --- */
+  const gr=await probe('socialnetwork_api.workgroup.list',{select:['ID','NAME','IS_SCRUM_PROJECT']});
+  sec('ПРОЕКТЫ И ГРУППЫ');
+  if(errOf(gr)) line('недоступно: '+errOf(gr));
+  else BX.toArray(gr).map(g=>g.workgroup||g).slice(0,50)
+    .forEach(g=>line('  ID '+(g.id||g.ID)+'  '+(g.name||g.NAME)
+      +'  скрам: '+((g.isScrumProject||g.IS_SCRUM_PROJECT)?'да':'—')));
+
+  const me=await probe('user.current');
+  sec('ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ И ПРАВА');
+  if(errOf(me)) line('недоступно: '+errOf(me));
+  else line('  '+[me.NAME,me.LAST_NAME].filter(Boolean).join(' ')+' (ID '+me.ID+')'
+    +(me.WORK_POSITION?', '+me.WORK_POSITION:''));
+  const sc=await probe('scope');
+  line('  выданные права (scope): '+(errOf(sc)?errOf(sc):BX.toArray(sc).join(', ')||JSON.stringify(sc)));
+
+  /* --- как это использует приложение --- */
+  sec('КАК ЭТИ ПОЛЯ ИСПОЛЬЗУЕТ ПРИЛОЖЕНИЕ');
+  line('поля выборки (select): '+taskSelect().join(', '));
+  line('этап и категория: '+(CONFIG.storage==='uf'
+    ? 'пользовательские поля '+CONFIG.ufStage+' / '+CONFIG.ufCategory
+    : 'метка в XML_ID вида bxs:stage=4;bxs:cat=bug'));
+  line('сторипоинты и процент: '+((CONFIG.spField||CONFIG.pctField)
+    ? (CONFIG.spField||'—')+' / '+(CONFIG.pctField||'—')
+    : 'метка в XML_ID вида bxs:sp=8;bxs:pct=60'));
+  line('статусы: 5 завершена; 3 и 4 в работе; 2 и 6 ещё не начата');
+  line('заявка = задача с parentId 0 (или с родителем вне выборки), подзадача = её дочерняя задача');
+  line('спринт задачи берётся из поля sprintId, состав спринта через item.list не запрашивается');
+  line('этапы регламента: '+STAGES.slice(1,7).map(s=>s.no+' '+s.name).join('; '));
+  line('категории и маршруты: '+Object.entries(CATEGORIES)
+    .map(([k,c])=>k+' «'+c.label+'» → '+(c.route.join(',')||'—')+' ['+(c.mode==='manual'?'вручную':'авто')+']').join('; '));
+
+  sec('СЫРЫЕ ОТВЕТЫ ПОРТАЛА (JSON)');
+  Object.keys(raw).forEach(m=>{ line(''); line('--- '+m+' ---'); line(JSON.stringify(raw[m],null,1)); });
+
+  return {text:out.join('\r\n'), raw};
+}
+
+/* =====================  СПИСОК ЗАДАЧ ПО ОТБОРУ  ===================== */
+function taskRows(){
+  const rows=[];
+  sortProblems(filtered()).forEach((pr,gi)=>{
+    const pg=progress(pr);
+    const st=spStats([pr]);
+    rows.push({_grp:gi, kind:'Заявка', id:pr.bxId||pr.id, parent:'', title:pr.title,
+      stage:'', stageName:'маршрут '+pg.done+'/'+pg.total, who:'', status:isSolved(pr)?'решена':'в работе',
+      cat:catOfCode(pr.cat).label, project:projectName(pr.groupId), sprint:pr.sprintId?sprintName(pr.sprintId):'бэклог',
+      react:'', spent:spentOf(pr), norm:normFor(pr), created:pr.createdAt, active:lastActivity(pr),
+      sp:spOf(pr)||st.plan, pct:spOf(pr)?pctOf(pr,pr):'', spDone:st.done, spOpen:st.open, spTotal:st.total});
+    routeOf(pr).forEach(sid=>stageTasks(pr,sid).forEach(x=>{
+      const sp=spOf(x), pc=sp?pctOf(x,pr):'';
+      rows.push({_grp:gi, kind:'Подзадача', id:x.bxId||x.sid, parent:pr.bxId||pr.id, title:x.title||STAGES[sid].name,
+        stage:STAGES[sid].no, stageName:STAGES[sid].name, who:person(x.who).name, status:statusRu(x),
+        cat:catOfCode(pr.cat).label, project:projectName(pr.groupId), sprint:pr.sprintId?sprintName(pr.sprintId):'бэклог',
+        react:x.reactionMin!=null?x.reactionMin:'', spent:x.spentH||0, norm:STAGES[sid].normMax,
+        created:x.createdAt, active:x.touchedAt||x.createdAt,
+        sp:sp||'', pct:pc, spDone:x.status==='done'?sp:0, spOpen:x.status==='done'?0:Math.round(sp*pc/10)/10,
+        spTotal:x.status==='done'?sp:Math.round(sp*pc/10)/10});
+    }));
+  });
+  return rows;
+}
+
+/* Колонки списка: подпись, ключ строки и признак числовой сортировки */
+const LIST_COLS=[
+  {label:'Тип',key:'kind'},{label:'ID',key:'id',num:true},{label:'Родитель',key:'parent',num:true},
+  {label:'Название',key:'title'},{label:'Этап',key:'stage'},{label:'Стадия',key:'stageName'},
+  {label:'Исполнитель',key:'who'},{label:'Статус',key:'status'},{label:'Категория',key:'cat'},
+  {label:'Проект',key:'project'},{label:'Спринт',key:'sprint'},
+  {label:'СП',key:'sp',num:true},{label:'% готовности',key:'pct',num:true},
+  {label:'СП завершённые',key:'spDone',num:true},{label:'СП незавершённые',key:'spOpen',num:true},
+  {label:'СП итого',key:'spTotal',num:true},
+  {label:'Реакция, мин',key:'react',num:true},{label:'Труд, ч',key:'spent',num:true},
+  {label:'Норматив, ч',key:'norm',num:true},{label:'Создана',key:'created',num:true},
+  {label:'Активность',key:'active',num:true}
+];
+/* Сортировка списка не рвёт иерархию: переставляются заявки целиком, подзадачи едут за своей заявкой */
+function sortListRows(rows){
+  const s=state.listSort;
+  if(!s || !s.key) return rows;
+  const col=LIST_COLS.find(c=>c.key===s.key)||{};
+  const blocks=new Map();
+  rows.forEach(r=>{ if(!blocks.has(r._grp)) blocks.set(r._grp,[]); blocks.get(r._grp).push(r); });
+  const arr=[...blocks.values()];
+  arr.sort((a,b)=>{
+    const va=a[0][s.key], vb=b[0][s.key];
+    if(col.num) return ((Number(va)||0)-(Number(vb)||0))*s.dir;
+    return String(va==null?'':va).localeCompare(String(vb==null?'':vb),'ru')*s.dir;
+  });
+  const out=[]; arr.forEach(b=>b.forEach(r=>out.push(r)));
+  return out;
+}
+
+async function openTaskList(quiet){
+  if(!quiet){
+    Progress.start('Формирование списка задач');
+    Progress.step('Отбор: '+filterText());
+    $('#layer').innerHTML='<div class="scrim"></div><aside class="drawer wide"><header><h2>Формирую список задач…</h2>'
+      +'<div class="routeline">Ход работы виден в панели справа внизу и в журнале действий.</div></header></aside>';
+    await new Promise(r=>setTimeout(r,0));      // даём браузеру нарисовать индикатор
+  }
+  const tRows=Date.now();
+  const sel=filtered();
+  if(!quiet) Progress.step('Под отбор попало заявок: '+sel.length);
+  let rows=sortListRows(taskRows());
+  if(!quiet){
+    Progress.step('Собрано строк: '+rows.length+' (заявки и подзадачи)');
+    await new Promise(r=>setTimeout(r,0));
+  }
+  let li=0, si=0;
+  rows.forEach(r=>{ if(r.kind==='Заявка'){ li++; si=0; r._no=String(li); } else { si++; r._no=li+'.'+si; } });
+  const heads=['№'].concat(LIST_COLS.map(c=>c.label));
+  const cells=r=>[r._no,r.kind,r.id,r.parent,r.title,r.stage,r.stageName,r.who,r.status,r.cat,r.project,r.sprint,
+                  r.sp, r.pct===''?'':r.pct+'%', r.spDone||0, r.spOpen||0, r.spTotal||0,
+                  r.react, Math.round((r.spent||0)*10)/10, Math.round((r.norm||0)*10)/10,
+                  ddate(r.created), ddate(r.active)];
+  Log.add('report','Сформирован список задач: '+rows.length+' строк',
+          {filter:filterText(), мс:Date.now()-tRows,
+           сортировка:state.listSort&&state.listSort.key?state.listSort.key+(state.listSort.dir<0?' ↓':' ↑'):'как на доске'});
+
+  $('#layer').innerHTML=`<div class="scrim" data-close></div>
+    <aside class="drawer wide" role="dialog" aria-label="Список задач">
+      <header>
+        <div class="mono" style="font-size:10.5px;color:var(--ink-2)">${esc(filterText())}</div>
+        <h2>Список задач · ${rows.length} строк</h2>
+        ${(()=>{const s=spStats(filtered());return `<div class="routeline" style="margin:0 0 8px">
+          Сторипоинты: итого <b class="mono">${s.total}</b> = завершённые <b class="mono">${s.done}</b>
+          + незавершённые <b class="mono">${s.open}</b> · план ${s.plan}</div>`;})()}
+        <div class="rowbtns">
+          <button class="btn small" data-csv>Скачать CSV</button>
+          <button class="btn small ghost" data-copy>Копировать таблицу</button>
+          <button class="btn small ghost" data-sortoff ${state.listSort&&state.listSort.key?'':'disabled'}>Порядок как на доске</button>
+          <button class="btn small ghost" data-close2>Закрыть</button>
+        </div>
+        <div class="routeline" style="margin:6px 0 0">Щелчок по заголовку столбца сортирует список:
+          заявки переставляются целиком, подзадачи остаются под своей заявкой.
+          Сейчас: <b>${state.listSort&&state.listSort.key
+            ? esc((LIST_COLS.find(c=>c.key===state.listSort.key)||{}).label)+(state.listSort.dir>0?', по возрастанию':', по убыванию')
+            : esc('порядок доски — '+(SORTS.find(x=>x.id===CONFIG.sort)||{}).label+', '+sortDirLabel())}</b></div>
+      </header>
+      <div class="body">
+        ${rows.length?`<table class="listtab"><thead><tr><th class="pick" title="Порядковый номер">№</th>${LIST_COLS.map(c=>{
+          const on=state.listSort&&state.listSort.key===c.key;
+          return `<th data-sort="${c.key}" class="${on?'sorted':''}" title="Сортировать по столбцу">${esc(c.label)}${on?(state.listSort.dir>0?' ▲':' ▼'):''}</th>`;
+        }).join('')}</tr></thead>
+        <tbody>${rows.map(r=>`<tr class="${r.kind==='Заявка'?'lead':''}" data-task="${String(r.id).replace(/[^0-9]/g,'')}"
+          title="Открыть задачу">${cells(r).map((c,ci)=>`<td class="${ci===0?'pick mono':''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+        :'<p class="lead">Под текущий отбор не попала ни одна задача.</p>'}
+      </div>
+    </aside>`;
+  const close=()=>{$('#layer').innerHTML='';};
+  $('#layer').querySelector('[data-close]').addEventListener('click',close);
+  $('#layer').querySelector('[data-close2]').addEventListener('click',close);
+  $('#layer').querySelectorAll('th[data-sort]').forEach(th=>th.addEventListener('click',()=>{
+    const k=th.dataset.sort, cur=state.listSort||{};
+    state.listSort = cur.key===k ? {key:k, dir:cur.dir>0?-1:1} : {key:k, dir:1};
+    Log.add('view','Список отсортирован по столбцу «'+th.textContent.trim()+'»');
+    openTaskList(true);
+  }));
+  const off=$('#layer').querySelector('[data-sortoff]');
+  if(off) off.addEventListener('click',()=>{ state.listSort=null; openTaskList(true); });
+  $('#layer').querySelector('[data-csv]').addEventListener('click',()=>{
+    const csv=toCsv([heads].concat(rows.map(cells)));
+    if(download('задачи-'+ddate(Date.now()).replace(/\./g,'-')+'.csv',csv))
+      Log.add('report','Список задач выгружен в CSV: '+rows.length+' строк');
+  });
+  $('#layer').querySelectorAll('tr[data-task]').forEach(tr=>tr.addEventListener('click',()=>{
+    if(tr.dataset.task) openTaskForm(tr.dataset.task);
+  }));
+  $('#layer').querySelector('[data-copy]').addEventListener('click',async()=>{
+    const txt=[heads].concat(rows.map(cells)).map(r=>r.join('\t')).join('\n');
+    try{ await navigator.clipboard.writeText(txt); toast('Таблица скопирована'); }
+    catch(e){ toast('Буфер недоступен, используйте CSV'); }
+  });
+  if(!quiet) Progress.done('строк '+rows.length);
+}
+
+/* =====================  ДОБОР ЗАДАЧ В СПРИНТ  =====================
+   Берём исполнителей текущего спринта, смотрим их задачи, созданные в период
+   спринта, и показываем те, которых в спринте нет. Отмеченные — одной кнопкой в спринт. */
+function currentSprintObj(){
+  if(state.sprint && state.sprint!=='__backlog'){
+    const s=state.sprints.find(x=>String(x.id)===String(state.sprint));
+    if(s) return s;
+  }
+  const list=state.sprints.filter(s=>!state.group||String(s.groupId)===String(state.group));
+  return list.find(s=>s.status==='active') || (state.group?list[0]:null) || null;
+}
+/* период спринта: даты портала, иначе — по самым ранним задачам спринта, иначе две недели назад */
+function sprintPeriod(sp, tasksInSprint){
+  const iso=d=>{ const x=new Date(d); return isNaN(x)?null:x.toISOString().slice(0,10); };
+  let from=sp.fromRaw?iso(sp.fromRaw):null, to=sp.toRaw?iso(sp.toRaw):null;
+  if(!from && tasksInSprint && tasksInSprint.length){
+    const ts=tasksInSprint.map(t=>new Date(t.createdDate||t.CREATED_DATE).getTime()).filter(v=>!isNaN(v));
+    if(ts.length) from=iso(Math.min(...ts));
+  }
+  if(!from) from=iso(Date.now()-14*24*3600*1000);
+  if(!to) to=iso(Date.now());
+  return {from, to};
+}
+
+async function openSprintIntake(){
+  const sp=currentSprintObj();
+  if(!sp){
+    toast('Не выбран спринт: выберите проект и спринт в шапке');
+    Log.add('error','Добор в спринт: текущий спринт не определён');
+    return;
+  }
+  Progress.start('Подбор задач для спринта «'+sp.name+'»');
+  $('#layer').innerHTML='<div class="scrim"></div><aside class="drawer wide"><header>'
+    +'<h2>Подбираю задачи для спринта «'+esc(sp.name)+'»…</h2>'
+    +'<div class="routeline">Ход работы виден в панели справа внизу и в журнале действий.</div></header></aside>';
+  await new Promise(r=>setTimeout(r,0));
+
+  try{
+    let inSprint=[], cand=[];
+    if(BX.ready){
+      Progress.step('Читаю задачи спринта');
+      inSprint=await BX.loadTasks({SPRINT_ID:Number(sp.id)}, 'спринт '+sp.id);
+      const users=[...new Set(inSprint.map(t=>t.responsible&&t.responsible.id).filter(Boolean).map(String))];
+      Progress.step('Исполнителей в спринте: '+users.length+', задач в спринте: '+inSprint.length);
+      if(!users.length) throw new Error('в спринте нет задач с исполнителями — некого отбирать');
+      const per=sprintPeriod(sp, inSprint);
+      Progress.step('Период спринта: '+per.from+' – '+per.to+', ищу задачи этих исполнителей');
+      const f={'>=CREATED_DATE':per.from, '<=CREATED_DATE':per.to+'T23:59:59', RESPONSIBLE_ID:users};
+      let raw=[];
+      try{ raw=await BX.loadTasks(f, 'исполнители спринта'); }
+      catch(e){
+        Log.add('probe','Отбор списком исполнителей не принят ('+e.message+') — иду по одному');
+        for(const u of users.slice(0,20)){
+          try{ raw=raw.concat(await BX.loadTasks({'>=CREATED_DATE':per.from,'<=CREATED_DATE':per.to+'T23:59:59',
+                RESPONSIBLE_ID:Number(u)}, 'исполнитель '+u)); }catch(err){}
+        }
+      }
+      const have=new Set(inSprint.map(t=>String(t.id)));
+      const seen=new Set();
+      cand=raw.filter(t=>{
+        const id=String(t.id);
+        if(have.has(id) || seen.has(id)) return false;
+        if(String(t.sprintId||'')===String(sp.id)) return false;
+        seen.add(id); return true;
+      });
+      state.intake={sprint:sp, period:per, users:users.length, list:cand};
+    }else{
+      /* демо-режим: те же правила, но по локальным данным */
+      const per=sprintPeriod(sp, []);
+      cand=state.problems.filter(p=>String(p.sprintId||'')!==String(sp.id))
+        .map(p=>({id:p.bxId||p.id, title:p.title, responsible:{id:'', name:person((p.subs[0]||{}).who).name},
+                  status:'2', groupId:p.groupId, sprintId:p.sprintId, createdDate:new Date(p.createdAt).toISOString()}));
+      state.intake={sprint:sp, period:per, users:0, list:cand, demo:true};
+    }
+    Progress.step('Кандидатов найдено: '+cand.length);
+    renderSprintIntake();
+    Progress.done('кандидатов '+cand.length);
+    Log.add('report','Подбор задач в спринт «'+sp.name+'»: кандидатов '+cand.length,
+            {спринт:sp.id, проект:projectName(sp.groupId)});
+  }catch(e){
+    Progress.fail(e.message);
+    $('#layer').innerHTML='';
+    toast('Подбор не удался: '+e.message);
+  }
+}
+
+function renderSprintIntake(){
+  const d=state.intake; if(!d) return;
+  const sp=d.sprint, rows=d.list;
+  const statusRuBx=v=>({'1':'новая','2':'ждёт выполнения','3':'выполняется','4':'ждёт контроля','5':'завершена','6':'отложена'})[String(v)]||String(v||'');
+  $('#layer').innerHTML=`<div class="scrim" data-close></div>
+    <aside class="drawer wide" role="dialog" aria-label="Добавление задач в спринт">
+      <header>
+        <div class="mono" style="font-size:10.5px;color:var(--ink-2)">Спринт «${esc(sp.name)}» · проект ${esc(projectName(sp.groupId))} · период ${esc(d.period.from)} – ${esc(d.period.to)}</div>
+        <h2>Добавление задач в спринт · найдено ${rows.length}</h2>
+        <div class="routeline" style="margin:0 0 8px">Задачи исполнителей спринта (${d.users||'—'} чел.),
+          созданные в период спринта и не входящие в него. Отметьте нужные и нажмите кнопку.
+          ${d.demo?'<b>Демо-режим: изменения не уйдут в портал.</b>':''}</div>
+        <div class="rowbtns">
+          <button class="btn" data-apply ${rows.length?'':'disabled'}>Включить задачи в текущий спринт</button>
+          <button class="btn small ghost" data-all>Отметить все</button>
+          <button class="btn small ghost" data-none>Снять отметки</button>
+          <button class="btn small ghost" data-close2>Закрыть</button>
+        </div>
+      </header>
+      <div class="body">
+        ${rows.length?`<table class="listtab"><thead><tr>
+          <th class="pick"><input type="checkbox" data-master aria-label="Отметить все"></th>
+          <th class="pick">№</th><th>ID</th><th>Название</th><th>Исполнитель</th><th>Статус</th><th>Проект</th><th>Спринт задачи</th><th>Создана</th>
+        </tr></thead><tbody>${rows.map((t,i)=>`<tr data-row="${esc(String(t.id))}">
+          <td class="pick"><input type="checkbox" data-pick="${esc(String(t.id))}"></td>
+          <td class="pick mono">${i+1}</td>
+          <td class="mono">${esc(String(t.id))}</td>
+          <td>${esc(t.title||'')}</td>
+          <td>${esc((t.responsible&&t.responsible.name)||'—')}</td>
+          <td>${esc(statusRuBx(t.status))}</td>
+          <td>${esc(projectName(t.groupId))}</td>
+          <td>${t.sprintId?esc(sprintName(t.sprintId)):'бэклог'}</td>
+          <td class="mono">${esc(ddate(new Date(t.createdDate||Date.now()).getTime()))}</td>
+        </tr>`).join('')}</tbody></table>`
+        :'<p class="lead">Задач под эти условия нет: у исполнителей спринта нет задач, созданных в его период и оставшихся вне спринта.</p>'}
+      </div>
+    </aside>`;
+  const close=()=>{$('#layer').innerHTML='';};
+  $('#layer').querySelector('[data-close]').addEventListener('click',close);
+  $('#layer').querySelector('[data-close2]').addEventListener('click',close);
+  const picks=()=>[...document.querySelectorAll('[data-pick]')];
+  const setAll=v=>picks().forEach(c=>{ c.checked=v; });
+  $('#layer').querySelector('[data-all]').addEventListener('click',()=>setAll(true));
+  $('#layer').querySelector('[data-none]').addEventListener('click',()=>setAll(false));
+  const master=$('#layer').querySelector('[data-master]');
+  if(master) master.addEventListener('change',e=>setAll(e.target.checked));
+  document.querySelectorAll('tr[data-row]').forEach(tr=>tr.addEventListener('click',e=>{
+    if(e.target.matches('input')) return;
+    const c=tr.querySelector('[data-pick]'); if(c) c.checked=!c.checked;
+  }));
+  const apply=$('#layer').querySelector('[data-apply]');
+  if(apply) apply.addEventListener('click',()=>applySprintIntake(apply));
+}
+
+async function applySprintIntake(btn){
+  const d=state.intake; if(!d) return;
+  const ids=[...document.querySelectorAll('[data-pick]')].filter(c=>c.checked).map(c=>c.dataset.pick);
+  if(!ids.length){ toast('Не отмечено ни одной задачи'); return; }
+  const sp=d.sprint;
+  btn.disabled=true; btn.textContent='Включаю…';
+  Progress.start('Включение задач в спринт «'+sp.name+'»');
+  Progress.step('Отмечено задач: '+ids.length);
+  let ok=0, bad=0;
+  for(let i=0;i<ids.length;i++){
+    const id=ids[i];
+    const t=d.list.find(x=>String(x.id)===String(id))||{};
+    Progress.step('('+(i+1)+' из '+ids.length+') задача #'+id+' → спринт «'+sp.name+'»');
+    if(!BX.ready){                                   // демо: двигаем локально
+      const pr=state.problems.find(p=>String(p.bxId||p.id)===String(id));
+      if(pr){ pr.sprintId=String(sp.id); ok++; } else bad++;
+      continue;
+    }
+    const fields={SPRINT_ID:Number(sp.id)};
+    if(sp.groupId && String(t.groupId||'')!==String(sp.groupId)) fields.GROUP_ID=Number(sp.groupId);
+    try{
+      await BX.call('tasks.task.update',{taskId:Number(id), fields});
+      ok++;
+      Log.add('task','Задача #'+id+' включена в спринт «'+sp.name+'»',
+              {название:t.title||'', проект:fields.GROUP_ID?projectName(fields.GROUP_ID):'без смены'});
+    }catch(e){
+      bad++;
+      Log.add('error','Задача #'+id+' в спринт не встала: '+e.message, {название:t.title||''});
+    }
+  }
+  Progress.done('включено '+ok+(bad?', не удалось '+bad:''));
+  Log.add('report','Добор в спринт «'+sp.name+'» завершён: включено '+ok+', ошибок '+bad);
+  toast('В спринт включено: '+ok+(bad?' · ошибок '+bad:''));
+  $('#layer').innerHTML='';
+  if(BX.ready) refresh(); else { fillSprints(); render(); }
+}
+
+/* =====================  ПАНЕЛЬ ЗАЯВКИ  ===================== */
+function openDrawer(id){
+  const pr=byId(id); if(!pr) return;
+  Log.add('view','Открыта заявка «'+pr.title+'»',{заявка:pr.id, задача:pr.bxId||''});
+  const r=routeOf(pr), pg=progress(pr), merged=CONFIG.mergeFirstThree||pr.merged;
+
+  const tree=r.map(sid=>{
+    const s=STAGES[sid], items=stageTasks(pr,sid);
+    const head=`<div class="trow ${items.length&&items.every(i=>i.status==='done')?'done':''}">
+        <span class="n">${s.no}</span>
+        <div><b>${esc(s.name)}</b><div style="font-size:11px;color:var(--ink-2)">
+          ${items.length?items.length+' задач · норматив ':'Подзадача не создана · норматив '}<span class="mono">${hours(s.normMin)}–${hours(s.normMax)}</span></div></div>
+        <button class="btn small ghost" data-mkadd="${sid}">${items.length?'+ ещё':'Создать'}</button>
+      </div>`;
+    const rows=items.map(x=>`<div class="trow ${x.status} spedit" style="margin-left:22px">
+        <span class="n">·</span>
+        <div><b>${esc(x.title||s.name)}</b><div style="font-size:11px;color:var(--ink-2)">
+          ${esc(person(x.who).name)} · ${statusRu(x)} · реакция ${x.reactionMin!=null?x.reactionMin+' мин':'—'}
+          · труд <span class="mono">${hours(x.spentH||0)}</span></div></div>
+        <div style="display:flex;gap:5px;align-items:center">
+          <input class="spin" type="number" min="0" step="1" placeholder="СП" value="${spOf(x)||''}" data-sp="${x.sid}" title="Сторипоинты">
+          <input class="spin" type="number" min="0" max="100" step="5" placeholder="%" value="${x.pct!=null&&x.pct!==''?x.pct:''}" data-pct="${x.sid}" title="Процент завершённости">
+          ${x.status==='done'?'<span class="mono" style="color:var(--ok)">✓</span>':`<button class="btn small" data-mkfin="${x.sid}">Завершил</button>`}
+        </div>
+      </div>`).join('');
+    return head+rows;
+  }).join('');
+
+  const checklist = merged ? `<div class="sec"><h5>Чек-лист объединённой подзадачи 1–3</h5>
+    ${['Проблема проанализирована, категория определена','Решение выработано','Решение согласовано с архитектором','Решение согласовано с заказчиком','ТЗ написано','ТЗ передано разработчику']
+      .map((t,i)=>`<label class="check"><input type="checkbox" data-check="${i}" ${pr.checks[i]?'checked':''}><span>${t}</span></label>`).join('')}</div>`:'';
+
+  const test = pr.subs.some(x=>x.stage===5 && x.status!=='done') ? `<div class="sec"><h5>Результат тестирования</h5>
+      <div class="rowbtns">
+        <button class="btn" data-test="ok">Тест пройден → внедрение</button>
+        <button class="btn ghost" data-test="fail">Тест не пройден → выработка решения</button>
+      </div>
+      <div class="note">Отрицательный результат возобновляет задачу на выработку решения, положительный создаёт подзадачу внедрения в рабочую базу.</div>
+    </div>`:'';
+
+  $('#layer').innerHTML=`<div class="scrim" data-close></div>
+    <aside class="drawer" role="dialog" aria-label="Заявка пользователя">
+      <header>
+        <div class="mono" style="font-size:10.5px;color:var(--ink-2)">${esc(pr.id)} · завершено ${pg.done}/${pg.total} · ${pg.pct}%</div>
+        <h2>${esc(pr.title)}</h2>
+        <div class="rowbtns" style="margin-top:0 0 8px">
+          <button class="btn small ghost" data-bx="${pr.bxId||''}">Открыть задачу в Битрикс24</button>
+        </div>
+        <label style="font-size:12px;color:var(--ink-2)">Категория проблемы задаёт маршрут
+          <select class="f-input" id="catSel" style="display:block;margin-top:6px;width:100%">
+            ${Object.entries(CATEGORIES).map(([k,v])=>`<option value="${k}" ${k===pr.cat?'selected':''}>${v.label} — этапы ${v.route.join(', ')}</option>`).join('')}
+          </select></label>
+      </header>
+      <div class="body">
+        <div class="sec"><h5>Сторипоинты заявки</h5>
+          <div class="trow">
+            <span class="n">СП</span>
+            <div><b>Оценка всей заявки</b><div style="font-size:11px;color:var(--ink-2)">
+              Заполните, если оценка ставится на заявку целиком. Пусто — сумма считается по подзадачам.</div></div>
+            <div style="display:flex;gap:5px;align-items:center">
+              <input class="spin" type="number" min="0" step="1" placeholder="СП" value="${spOf(pr)||''}" data-sp="__pr">
+              <input class="spin" type="number" min="0" max="100" step="5" placeholder="%" value="${pr.pct!=null&&pr.pct!==''?pr.pct:''}" data-pct="__pr">
+            </div>
+          </div>
+          ${(()=>{const s=spStats([pr]), own=spOf(pr), kids=pr.subs.reduce((a,x)=>a+spOf(x),0);
+            return s.counted?`<div class="note">План <b class="mono">${s.plan}</b> = заявка <b class="mono">${own}</b> + подчинённые <b class="mono">${kids}</b>.<br>
+              Зачтено <b class="mono">${s.total}</b> = завершённые <b class="mono">${s.done}</b> + незавершённые <b class="mono">${s.open}</b>.</div>`
+              :'<div class="note">Оценка ещё не проставлена.</div>';})()}
+        </div>
+
+        <div class="sec"><h5>Задачи по стадиям</h5>${tree}
+          ${missingStages(pr).length?`<div class="rowbtns"><button class="btn" data-ensure-all>Создать подзадачи на все этапы маршрута (${missingStages(pr).length})</button></div>`:''}
+          <label class="check" style="border:0"><input type="checkbox" id="mergeChk" ${merged?'checked':''}>
+            <span>Объединить этапы 1–3 в одну подзадачу с чек-листом</span></label>
+        </div>
+        ${checklist}${test}
+        <div class="sec"><h5>Переписка — только в заявке пользователя</h5>
+          <div class="chat">${pr.chat.map(m=>`<div class="msg"><b>${esc(m[0])}</b><br>${esc(m[1])}</div>`).join('')||'<div class="msg">Сообщений пока нет.</div>'}</div>
+          <div class="rowbtns"><input class="f-input" id="msg" placeholder="Написать в заявку" style="flex:1">
+            <button class="btn small" data-send>Отправить</button></div>
+        </div>
+      </div>
+    </aside>`;
+
+  const close=()=>{$('#layer').innerHTML='';};
+  $('#layer').querySelector('[data-close]').addEventListener('click',close);
+  const bxBtn=$('#layer').querySelector('[data-bx]');
+  if(bxBtn) bxBtn.addEventListener('click',()=>openTaskForm(bxBtn.dataset.bx, pr.title));
+  document.addEventListener('keydown',function k(e){if(e.key==='Escape'){close();document.removeEventListener('keydown',k);}});
+  $('#catSel').addEventListener('change',async e=>{
+    pr.cat=e.target.value;
+    Log.add('route','Категория изменена на «'+catOfCode(pr.cat).label+'»',
+            {проблема:pr.id, маршрут:routeOf(pr).join(', ')});
+    if(state.live && pr.bxId){ try{ await BX.setMarker(pr, {stage:currentStage(pr), cat:pr.cat}); }
+      catch(err){ Log.add('error','Не удалось записать метку этапа: '+err.message,{задача:pr.bxId}); toast('Битрикс24: '+err.message); } }
+    if(autoMode(pr)) await ensureRoute(pr.id,true);
+    render(); openDrawer(pr.id);
+    toast(autoMode(pr)?'Маршрут пересобран, подзадачи созданы на каждый этап':'Маршрут пересобран, подзадачи создаются вручную');
+  });
+  $('#mergeChk').addEventListener('change',e=>{pr.merged=e.target.checked;openDrawer(pr.id);});
+  $('#layer').querySelectorAll('[data-check]').forEach(el=>el.addEventListener('change',e=>{pr.checks[e.target.dataset.check]=e.target.checked;}));
+  $('#layer').querySelectorAll('[data-mkadd]').forEach(el=>el.addEventListener('click',async()=>{
+    const sid=Number(el.dataset.mkadd), has=stageTasks(pr,sid).length;
+    const nm=has?prompt('Название дополнительной подзадачи:',STAGES[sid].name+' — доработка'):null;
+    if(has&&!nm) return;
+    await addSub(pr.id,sid,nm); openDrawer(pr.id);
+  }));
+  const ea=$('#layer').querySelector('[data-ensure-all]');
+  if(ea) ea.addEventListener('click',async()=>{await ensureRoute(pr.id);openDrawer(pr.id);});
+  const saveSp=async(target, field, raw)=>{
+    const val = raw===''?null:Math.max(0, Number(raw)||0);
+    const patch = field==='sp'?{sp:val==null?'':val}:{pct:val==null?'':val};
+    target[field]= val==null?(field==='sp'?0:null):val;
+    Log.add('sp', (field==='sp'?'Сторипоинты':'Процент завершённости')+': '
+      +(target===pr?'заявка':(target.title||STAGES[target.stage].name))+' → '+(val==null?'очищено':val),
+      {заявка:pr.id});
+    const bxId = target===pr?pr.bxId:target.bxId;
+    if(state.live && bxId){
+      try{
+        if(field==='sp' && CONFIG.spSource==='scrum'){ await BX.setScrumPoints(bxId, val||0); }
+        else await BX.setMarker({bxId, xmlId:target.xmlId||''}, patch);
+      }catch(e){ Log.add('error','Не удалось записать оценку: '+e.message,{задача:bxId}); toast('Битрикс24: '+e.message); }
+    }
+    render(); openDrawer(pr.id);
+  };
+  $('#layer').querySelectorAll('[data-sp]').forEach(el=>el.addEventListener('change',e=>{
+    const id=el.dataset.sp;
+    saveSp(id==='__pr'?pr:pr.subs.find(v=>v.sid===id), 'sp', e.target.value);
+  }));
+  $('#layer').querySelectorAll('[data-pct]').forEach(el=>el.addEventListener('change',e=>{
+    const id=el.dataset.pct;
+    saveSp(id==='__pr'?pr:pr.subs.find(v=>v.sid===id), 'pct', e.target.value);
+  }));
+  $('#layer').querySelectorAll('[data-mkfin]').forEach(el=>el.addEventListener('click',async()=>{await finishSub(pr.id,el.dataset.mkfin);openDrawer(pr.id);}));
+  $('#layer').querySelectorAll('[data-test]').forEach(b=>b.addEventListener('click',async()=>{
+    const t=pr.subs.find(x=>x.stage===5&&x.status!=='done');
+    if(b.dataset.test==='ok'){ pr.chat.push(['Постановщик','Тест положительный, замечаний нет']); await finishSub(pr.id,t.sid); await addSub(pr.id,6,null,true); render(); }
+    else { pr.chat.push(['Постановщик','Тест отрицательный, решение возвращается на доработку']);
+           await addSub(pr.id,4,'Исправление по итогам теста',true); render(); }
+    openDrawer(pr.id);
+  }));
+  $('#layer').querySelector('[data-send]').addEventListener('click',async()=>{
+    const v=$('#msg').value.trim(); if(!v) return;
+    pr.chat.push(['Вы',v]); touch(pr);
+    if(state.live&&pr.bxId){ try{ await BX.comment(pr.bxId,v);}catch(e){toast('Битрикс24: '+e.message);} }
+    openDrawer(pr.id);
+  });
+}
+
+/* =====================  РЕГЛАМЕНТ / КОМАНДА  ===================== */
+/* =====================  СПРАВОЧНИК КАТЕГОРИЙ И МАРШРУТОВ  ===================== */
+function usedBy(code){ return state.problems.filter(p=>p.cat===code).length; }
+/* живой предпросмотр: карточка заявки и карточка подзадачи текущими настройками */
+function cardPreviewHtml(){
+  const pr=state.problems[0];
+  if(!pr) return '<span class="routeline">Нет задач для предпросмотра</span>';
+  const sub=pr.subs[0];
+  return `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+    <div class="lane-head" style="max-width:300px;padding:0">${headCard(pr)}</div>
+    ${sub?`<div style="width:230px">${taskCard(pr,sub,STAGES[sub.stage]||STAGES[1])}</div>`:''}
+  </div>`;
+}
+
+function renderRoutes(){
+  const cards=Object.entries(CATEGORIES).map(([code,c])=>{
+    const used=usedBy(code);
+    const picks=STAGES.slice(1,7).map(s=>{
+      const on=c.route.includes(s.id);
+      const who=c.assignees[s.id]||'';
+      return `<div class="spick ${on?'on':''}">
+        <button style="all:unset;cursor:pointer;display:block;width:100%" data-tog="${code}" data-stage="${s.id}"
+          aria-pressed="${on}" title="Включить или исключить этап из маршрута">
+          <span class="sn">этап ${s.no}</span>
+          <span class="snm" style="display:block">${esc(s.name)}</span>
+        </button>
+        ${on?`<select data-asg="${code}" data-stage="${s.id}">
+          <option value="">по роли: ${esc(short((TEAM.find(x=>x.stages.includes(s.id))||{name:'—'}).name))}</option>
+          ${TEAM.map(m=>`<option value="${m.id}" ${m.id===who?'selected':''}>${esc(short(m.name))}</option>`).join('')}
+        </select>`:''}
+      </div>`;
+    }).join('');
+    return `<div class="catcard">
+      <div class="head">
+        <span class="chip ${c.cls}">${esc(code)}</span>
+        <input class="name" value="${esc(c.label)}" data-name="${code}" aria-label="Название категории">
+        <div class="grow"></div>
+        <div class="modepick" role="group" aria-label="Способ создания подзадач">
+          <button data-mode="${code}" data-val="auto" aria-pressed="${c.mode!=='manual'}">Автоматически</button>
+          <button data-mode="${code}" data-val="manual" aria-pressed="${c.mode==='manual'}">Вручную</button>
+        </div>
+        <button class="btn small ghost" data-del="${code}" ${used?'disabled title="Категория используется"':''}>Удалить</button>
+      </div>
+      <div class="stagepick">${picks}</div>
+      <div class="routeline">Маршрут: <span class="mono">${c.route.length?c.route.join(' → '):'этапы не выбраны'}</span>
+        · норматив маршрута <span class="mono">${hours(c.route.reduce((a,s)=>a+STAGES[s].normMax,0))}</span>
+        · проблем в работе: <span class="mono">${used}</span></div>
+    </div>`;
+  }).join('');
+
+  $('#app').innerHTML=`<div class="page">
+    <h1>Настройки</h1>
+    <div class="routeline" style="margin:0 0 10px">Версия сборки <b class="mono">${APP_VERSION}</b>
+      · ${BX.ready?'портал на связи':'вне портала'}</div>
+    <p class="lead">Вид карточки заявки, справочник категорий проблем и маршруты по ним. Категория — результат первого этапа: она задаёт, какие этапы проходит проблема и как появляются подзадачи.</p>
+
+    <div class="settings">
+      <h5 style="margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Сортировка и вид строк</h5>
+      <label>Группировать заявки
+        <select class="f-input" id="setGroup" style="min-width:260px">
+          ${GROUPS.map(g=>`<option value="${g.id}" ${CONFIG.groupBy===g.id?'selected':''}>${g.label}</option>`).join('')}
+        </select>
+      </label>
+      <label>Сортировать задачи
+        <select class="f-input" id="setSort" style="min-width:220px">
+          ${SORTS.map(s=>`<option value="${s.id}" ${CONFIG.sort===s.id?'selected':''}>${s.label}</option>`).join('')}
+        </select>
+        <button class="btn small ghost" id="setDir">${sortDirLabel()}</button>
+      </label>
+      <label>Строка заявки
+        <div class="modepick">
+          <button data-hmode="full" aria-pressed="${CONFIG.headMode!=='compact'}">Развёрнутая</button>
+          <button data-hmode="compact" aria-pressed="${CONFIG.headMode==='compact'}">Свёрнутая</button>
+        </div>
+      </label>
+      <label>Шапка колонок
+        <div class="modepick">
+          <button data-headermode="full" aria-pressed="${CONFIG.headerMode!=='compact'}">Подробная</button>
+          <button data-headermode="compact" aria-pressed="${CONFIG.headerMode==='compact'}">Краткая</button>
+        </div>
+        <span class="routeline" style="margin:0">в краткой остаются номер этапа, название и сумма сторипоинтов</span>
+      </label>
+      <div class="routeline">В свёрнутом виде в первой колонке остаётся только наименование задачи — поля ниже на неё не влияют. Тот же переключатель есть в шапке доски.
+        Сортировка «по сумме сторипоинтов» считает план заявки: её собственная оценка плюс оценки подзадач.</div>
+
+      <h5 style="margin:18px 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Вид карточки заявки</h5>
+      <div class="fieldpick">
+        <label class="fp on"><input type="checkbox" checked disabled> Формулировка проблемы</label>
+        ${HEAD_FIELDS.map(f=>`<label class="fp ${CONFIG.headFields.includes(f.id)?'on':''}">
+          <input type="checkbox" data-field="${f.id}" ${CONFIG.headFields.includes(f.id)?'checked':''}> ${esc(f.label)}</label>`).join('')}
+      </div>
+      <div class="routeline">Формулировка проблемы показывается всегда: по ней открывается карточка. Остальное можно убрать, чтобы строка стала компактнее.</div>
+      <div class="preview" id="cardPreview">${cardPreviewHtml()}</div>
+    </div>
+
+    <div class="settings">
+      <h5 style="margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Тип карточки</h5>
+      <label>Карточка заявки
+        <div class="modepick">
+          <button data-ctype="std" aria-pressed="${CONFIG.cardType!=='custom'}">Типовая</button>
+          <button data-ctype="custom" aria-pressed="${CONFIG.cardType==='custom'}">Пользовательская</button>
+        </div>
+      </label>
+      <div class="routeline">Типовая карточка собирается только из полей приложения, отмеченных выше.
+        Пользовательская — это те же типовые реквизиты плюс любые поля задачи портала, включая пользовательские
+        (<span class="mono">UF_*</span>). Выбранные поля добавляются в запрос к порталу, поэтому после изменения
+        набора приложение перечитывает задачи.</div>
+      ${CONFIG.cardType==='custom'?`
+      <label style="margin-top:10px">Поиск по полям
+        <input class="f-input" id="cardFieldQ" placeholder="например срок, процент, UF_" style="min-width:260px" value="${esc(state.cardFieldQ||'')}">
+        <span class="routeline" style="margin:0">выбрано: <b class="mono">${(CONFIG.cardFields||[]).length}</b></span>
+        <button class="btn small ghost" id="cardFieldsClear">Снять все</button>
+      </label>
+      ${(()=>{
+        const all=portalFieldList();
+        const grp=(uf)=>{
+          const list=all.filter(f=>f.uf===uf);
+          if(!list.length) return '';
+          return `<div class="routeline" style="margin:10px 0 4px">${uf?'Пользовательские поля портала':'Типовые реквизиты задачи'} · ${list.length}</div>
+          <div class="fieldpick">${list.map(f=>`<label class="fp ${(CONFIG.cardFields||[]).includes(f.name)?'on':''}" data-fname="${esc(f.name)}"
+            title="${esc(f.name+(f.type?' · '+f.type:''))}">
+            <input type="checkbox" data-cfield="${esc(f.name)}" ${(CONFIG.cardFields||[]).includes(f.name)?'checked':''}>
+            <span>${esc(f.title)}<br><span class="mono" style="font-size:10px;color:var(--ink-2)">${esc(f.name)}</span></span></label>`).join('')}</div>`;
+        };
+        return grp(false)+grp(true);
+      })()}
+      <div class="routeline">${state.taskFields?'Список получен с портала методом tasks.task.getFields.'
+        :'Портал недоступен — показан типовой минимум полей. На портале список будет полным, вместе с пользовательскими полями.'}
+        ${BX.ready?'':'В демо-режиме значения таких полей пустые: они приходят из задач портала, поэтому в карточке строка не появится.'}</div>
+      `:''}
+    </div>
+
+    <div class="settings">
+      <h5 style="margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Высота карточки и шрифт</h5>
+      <label>Высота головной карточки
+        <div class="modepick">
+          <button data-hh="auto" aria-pressed="${!CONFIG.headH}">По содержимому</button>
+          <button data-hh="fix" aria-pressed="${!!CONFIG.headH}">Фиксированная</button>
+        </div>
+        <input type="range" id="setHeadH" min="60" max="420" step="10" value="${CONFIG.headH||140}" ${CONFIG.headH?'':'disabled'} style="width:220px">
+        <span class="mono" id="setHeadHV">${CONFIG.headH?CONFIG.headH+' px':'авто'}</span>
+      </label>
+      <div class="routeline">Фиксированная высота выравнивает строки доски: карточка заявки не растёт от числа полей,
+        лишнее прокручивается внутри карточки. По содержимому — как раньше, высота по самой полной строке.</div>
+      <label>Размер шрифта карточек
+        <input type="range" id="setCardFs" min="9" max="20" step="0.5" value="${CONFIG.cardFs}" style="width:220px">
+        <span class="mono" id="setCardFsV">${CONFIG.cardFs} px</span>
+      </label>
+      <label>Шрифт карточек
+        <select class="f-input" id="setCardFf" style="min-width:300px">
+          ${CARD_FONTS.map(f=>`<option value="${esc(f.id)}" ${CONFIG.cardFf===f.id?'selected':''}>${esc(f.label)}</option>`).join('')}
+        </select>
+        <button class="btn small ghost" id="cardReset">Вернуть по умолчанию</button>
+      </label>
+      <div class="routeline">Размер задаёт базовый кегль: заголовок карточки на 1,5 px крупнее, подписи — мельче.
+        Настройка красит и карточку заявки, и карточки подзадач в ячейках.</div>
+      <div class="preview" id="cardPreview2">${cardPreviewHtml()}</div>
+    </div>
+
+    <div class="settings">
+      <label><input type="checkbox" id="setAuto" ${CONFIG.autoCreateRoute?'checked':''}>
+        Создавать подзадачи автоматически по маршруту</label>
+      <label>При приёме заявки создавать
+        <select class="f-input" id="setIntake" style="min-width:220px">
+          <option value="first" ${CONFIG.createOnIntake==='first'?'selected':''}>только первый этап маршрута</option>
+          <option value="all" ${CONFIG.createOnIntake==='all'?'selected':''}>сразу весь маршрут</option>
+        </select></label>
+      <div class="routeline">Общий выключатель сильнее настройки категории: сняли галку — все подзадачи создаются только руками. Настройки хранятся в приложении портала.</div>
+    </div>
+
+    <div class="settings">
+      <h5 style="margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Выгрузка структуры портала</h5>
+      <div class="routeline" style="margin:0 0 10px">Опрашивает портал и собирает, что реально доступно приложению:
+        все поля задач, пользовательские поля, образец задачи со значениями, какие скрам-методы отвечают,
+        проекты, спринты, права и то, как приложение эти поля использует. В конце — сырые ответы JSON.</div>
+      <div class="rowbtns">
+        <button class="btn" id="structTxt">Собрать и скачать TXT</button>
+        <button class="btn ghost" id="structJson">Только JSON ответов</button>
+      </div>
+      <div class="routeline" id="structState">${BX.ready?'портал на связи, можно собирать':'вне портала: выгрузка соберёт только настройки приложения'}</div>
+    </div>
+
+    <div class="settings">
+      <h5 style="margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Цвета задач по статусу</h5>
+      <div class="colorpick">
+        ${[['new','Создана, ещё не начата'],['work','Выполняется'],['done','Завершена']].map(([k,label])=>`
+          <label class="cp"><input type="color" data-color="${k}" value="${esc(CONFIG.colors[k])}">
+            <span>${label}<br><span class="mono" style="font-size:10.5px;color:var(--ink-2)">${esc(CONFIG.colors[k])}</span></span></label>`).join('')}
+      </div>
+      <div class="preview" style="display:flex;gap:8px;flex-wrap:wrap">
+        ${['new','work','done'].map(k=>`<div class="scard ${k}" style="cursor:default;max-width:190px;margin:0">
+          <div class="t">Пример: ${k==='new'?'создана':(k==='work'?'выполняется':'завершена')}</div>
+          <div class="m">Исполнитель · этап 4</div></div>`).join('')}
+      </div>
+      <div class="rowbtns"><button class="btn small ghost" id="colReset">Вернуть цвета по умолчанию</button></div>
+      <div class="routeline">Цвет красит карточку в ячейке и строку в панели заявки. Рамка подбирается автоматически, темнее заливки.</div>
+    </div>
+
+    <div class="settings">
+      <h5 style="margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Сторипоинты</h5>
+      <label>Откуда берутся сторипоинты
+        <select class="f-input" id="setSpSrc" style="min-width:300px">
+          <option value="marker" ${CONFIG.spSource==='marker'?'selected':''}>метка в XML_ID задачи (без настройки портала)</option>
+          <option value="field" ${CONFIG.spSource==='field'?'selected':''}>пользовательское поле задачи</option>
+          <option value="scrum" ${CONFIG.spSource==='scrum'?'selected':''}>storyPoints скрам-задачи (tasks.api.scrum.task)</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="setSpAuto" ${CONFIG.spSourceAuto?'checked':''}>
+        Подбирать источник сам: если оценок в метке нет, брать storyPoints из скрам-задач</label>
+      <label>Поле со сторипоинтами
+        <input class="f-input" id="setSp" value="${esc(CONFIG.spField)}" placeholder="например UF_STORY_POINTS">
+      </label>
+      <label>Поле с процентом завершённости
+        <input class="f-input" id="setPct" value="${esc(CONFIG.pctField)}" placeholder="например UF_PERCENT_DONE">
+      </label>
+      <label>Если процент не заполнен
+        <select class="f-input" id="setPctFb" style="min-width:260px">
+          <option value="stages" ${CONFIG.pctFallback==='stages'?'selected':''}>считать по статусу и закрытым этапам</option>
+          <option value="zero" ${CONFIG.pctFallback==='zero'?'selected':''}>считать нулём</option>
+        </select>
+      </label>
+      <div class="rowbtns">
+        <button class="btn small ghost" id="fieldsAuto">Подобрать поля автоматически</button>
+        <button class="btn small ghost" id="spProbe">Проверить, где лежат оценки</button>
+      </div>
+      <div class="routeline" id="spProbeOut">Текущий источник: <b>${CONFIG.spSource==='scrum'?'storyPoints скрам-задачи'
+        :(CONFIG.spSource==='field'?('поле '+(CONFIG.spField||'не задано')):'метка в XML_ID')}</b>.
+        Проверка опрашивает первые задачи текущего отбора и показывает, что реально отдаёт портал.</div>
+      <div class="routeline">Оставьте поля пустыми — оценка будет храниться в метке задачи вместе с этапом,
+        настраивать на портале ничего не нужно. Формула: <span class="mono">итого = СП завершённых задач
+        + Σ(СП × процент готовности) по незавершённым</span>.</div>
+      ${(()=>{const s=spStats(state.problems);return `<div class="preview">Сейчас по всем заявкам:
+        итого <b class="mono">${s.total}</b> = завершённые <b class="mono">${s.done}</b>
+        + незавершённые <b class="mono">${s.open}</b>, план ${s.plan}, задач с оценкой ${s.counted}</div>`;})()}
+    </div>
+
+    <div class="settings">
+      <h5 style="margin:0 0 10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)">Журнал действий</h5>
+      <label><input type="checkbox" id="setLog" ${CONFIG.logSave?'checked':''}>
+        Сохранять журнал между сеансами</label>
+      <label><input type="checkbox" id="setLogV" ${CONFIG.logVerbose?'checked':''}>
+        Полное логирование: каждый запрос к порталу с параметрами, числом записей и временем ответа</label>
+      <label>Хранить записей
+        <select class="f-input" id="setLogLimit" style="min-width:140px">
+          ${[100,300,1000,3000].map(n=>`<option value="${n}" ${Number(CONFIG.logLimit)===n?'selected':''}>${n}</option>`).join('')}
+        </select>
+        <span class="routeline" style="margin:0">сейчас записей: <b class="mono">${Log.items.length}</b></span>
+      </label>
+      <div class="rowbtns">
+        <button class="btn small" id="logCsv">Скачать журнал CSV</button>
+        <button class="btn small ghost" id="logClear">Очистить журнал</button>
+      </div>
+      ${Log.items.length?`<div class="preview" style="max-height:220px;overflow:auto">
+        <table class="listtab"><tbody>${Log.items.slice(-12).reverse().map(r=>`<tr>
+          <td class="mono" style="white-space:nowrap">${esc(dtime(r.ts))}</td>
+          <td>${esc(r.kind)}</td><td>${esc(r.text)}</td>
+          <td class="mono" style="font-size:10.5px;color:var(--ink-2)">${esc(r.extra?Object.entries(r.extra).map(([k,v])=>k+': '+v).join(', '):'')}</td>
+        </tr>`).join('')}</tbody></table></div>
+        <div class="routeline">Показаны последние 12 записей, в файл выгружаются все.</div>`
+        :'<div class="routeline">Журнал пока пуст.</div>'}
+    </div>
+
+    ${cards}
+    <div class="rowbtns">
+      <button class="btn" id="catAdd">Добавить категорию</button>
+      <button class="btn ghost" id="catReset">Вернуть категории из регламента</button>
+    </div>
+  </div>`;
+
+  const save=(rerender)=>{ Store.write(); if(rerender!==false) renderRoutes(); };
+
+  $('#setAuto').addEventListener('change',e=>{ CONFIG.autoCreateRoute=e.target.checked; save(); toast(e.target.checked?'Подзадачи создаются по маршруту':'Подзадачи создаются вручную'); });
+  $('#setIntake').addEventListener('change',e=>{ CONFIG.createOnIntake=e.target.value; save(false); });
+  const runStruct=async(kind)=>{
+    const st=$('#structState'), b1=$('#structTxt'), b2=$('#structJson');
+    b1.disabled=b2.disabled=true;
+    const t0=Date.now();
+    Log.add('probe','Запущена выгрузка структуры портала');
+    try{
+      const res=await collectStructure(m=>{ st.textContent='опрашиваю: '+m+'…'; });
+      const stamp=ddate(Date.now()).replace(/\./g,'-');
+      if(kind==='json') download('структура-json-'+stamp+'.json', JSON.stringify(res.raw,null,1),'application/json');
+      else download('структура-задач-'+stamp+'.txt', res.text, 'text/plain');
+      st.textContent='готово за '+Math.round((Date.now()-t0)/100)/10+' с · методов опрошено: '+Object.keys(res.raw).length;
+      Log.add('probe','Структура выгружена', {методов:Object.keys(res.raw).length, формат:kind==='json'?'JSON':'TXT'});
+    }catch(e){
+      st.textContent='ошибка: '+e.message;
+      Log.add('error','Выгрузка структуры не удалась: '+e.message);
+    }finally{ b1.disabled=b2.disabled=false; }
+  };
+  $('#structTxt').addEventListener('click',()=>runStruct('txt'));
+  $('#structJson').addEventListener('click',()=>runStruct('json'));
+
+  document.querySelectorAll('[data-color]').forEach(el=>el.addEventListener('change',e=>{
+    CONFIG.colors[el.dataset.color]=e.target.value;
+    applyColors(); Log.add('view','Цвет статуса «'+el.dataset.color+'» изменён на '+e.target.value);
+    save();
+  }));
+  $('#colReset').addEventListener('click',()=>{
+    CONFIG.colors={new:'#FFFDF7', work:'#FCF1BE', done:'#E2F0DD'};
+    applyColors(); save(); toast('Цвета сброшены');
+  });
+  $('#setSpAuto').addEventListener('change',e=>{ CONFIG.spSourceAuto=e.target.checked; save(false); });
+  $('#setSpSrc').addEventListener('change',e=>{ CONFIG.spSource=e.target.value;
+    Log.add('view','Источник сторипоинтов: '+CONFIG.spSource); save(); });
+  $('#spProbe').addEventListener('click',async()=>{
+    const out=$('#spProbeOut'), btn=$('#spProbe');
+    btn.disabled=true; out.textContent='опрашиваю портал…';
+    const list=filtered().length?filtered():state.problems;
+    const ids=[], push=v=>{ if(v && ids.indexOf(String(v))<0) ids.push(String(v)); };
+    list.forEach(p=>{ if(p.sprintId){ push(p.bxId); p.subs.forEach(x=>push(x.bxId)); } });
+    list.forEach(p=>{ push(p.bxId); p.subs.forEach(x=>push(x.bxId)); });
+    const sample=ids.slice(0,50);
+    const marker=list.reduce((a,p)=>a+(p.sp?1:0)+p.subs.filter(x=>x.sp).length,0);
+    const uf=CONFIG.spField
+      ? list.reduce((a,p)=>a+(fieldValue(p,CONFIG.spField)!==''?1:0),0) : null;
+    let scrum=null, err='', raw='';
+    if(BX.ready && sample.length){
+      try{
+        const one=await BX.call('tasks.api.scrum.task.get',{id:Number(sample[0])});
+        raw=JSON.stringify(one).slice(0,220);
+      }catch(e){ err=e.message; }
+      try{
+        state.spCache={};                       // проверяем портал, а не кэш
+        const pts=await BX.loadScrumPoints(sample);
+        scrum=Object.keys(pts).length;
+      }catch(e){ err=err||e.message; }
+    }
+    const lines=[
+      'Проверено задач: <b>'+sample.length+'</b>'+(BX.ready?'':' (вне портала проверка неполная)'),
+      'Метка в XML_ID: задач с оценкой <b>'+marker+'</b>',
+      CONFIG.spField?('Поле '+esc(CONFIG.spField)+': задач со значением <b>'+uf+'</b>'):'Поле со сторипоинтами не задано',
+      'Скрам-задача (tasks.api.scrum.task.get, параметр id): '
+        +(scrum===null?'не проверялось':('задач с оценкой <b>'+scrum+'</b>')),
+      raw?('Ответ портала по задаче #'+esc(sample[0])+': <span class="mono">'+esc(raw)+'</span>'):'',
+      err?('Ошибка: <b>'+esc(err)+'</b>'):''
+    ].filter(Boolean);
+    out.innerHTML=lines.join('<br>');
+    Log.add('probe','Проверка источника сторипоинтов: метка '+marker+', скрам '+(scrum===null?'—':scrum)
+      +', задач '+sample.length, {ошибка:err||'—'});
+    if(scrum && !marker && CONFIG.spSource!=='scrum'){
+      CONFIG.spSource='scrum'; Store.write();
+      out.innerHTML+='<br><b>Источник переключён на скрам-задачи.</b> Нажмите «Обновить» в шапке.';
+    }
+    btn.disabled=false;
+  });
+  $('#fieldsAuto').addEventListener('click',async()=>{
+    if(!BX.ready){ toast('Нужен портал'); return; }
+    try{
+      const f=await BX.detectFields();
+      if(f.pct) CONFIG.pctField=f.pct;
+      if(f.sp){ CONFIG.spField=f.sp; CONFIG.spSource='field'; }
+      Log.add('view','Автоподбор полей: процент — '+(f.pct||'не найдено')+', сторипоинты — '+(f.sp||'не найдено'));
+      save();
+      toast('Процент: '+(f.pct||'не найдено')+' · СП: '+(f.sp||'не найдено'));
+    }catch(e){ toast('Битрикс24: '+e.message); }
+  });
+  $('#setSp').addEventListener('change',e=>{ CONFIG.spField=e.target.value.trim(); save(); toast('Поле сторипоинтов: '+(CONFIG.spField||'метка задачи')); });
+  $('#setPct').addEventListener('change',e=>{ CONFIG.pctField=e.target.value.trim(); save(); });
+  $('#setPctFb').addEventListener('change',e=>{ CONFIG.pctFallback=e.target.value; save(); });
+  $('#setLog').addEventListener('change',e=>{
+    CONFIG.logSave=e.target.checked;
+    if(CONFIG.logSave){ Log.save(); toast('Журнал сохраняется'); }
+    else { try{ localStorage.removeItem(Log.key); }catch(err){} toast('Журнал только на время сеанса'); }
+    save(false);
+  });
+  $('#setLogV').addEventListener('change',e=>{
+    CONFIG.logVerbose=e.target.checked;
+    Log.add('view','Полное логирование '+(CONFIG.logVerbose?'включено':'выключено'));
+    save(false);
+  });
+  $('#setLogLimit').addEventListener('change',e=>{
+    CONFIG.logLimit=Number(e.target.value);
+    if(Log.items.length>CONFIG.logLimit) Log.items=Log.items.slice(-CONFIG.logLimit);
+    Log.save(); save();
+  });
+  $('#logCsv').addEventListener('click',()=>{
+    if(!Log.items.length){ toast('Журнал пуст'); return; }
+    download('журнал-'+ddate(Date.now()).replace(/\./g,'-')+'.csv', Log.csv());
+  });
+  $('#logClear').addEventListener('click',()=>{
+    if(!confirm('Очистить журнал действий?')) return;
+    Log.clear(); renderRoutes(); toast('Журнал очищен');
+  });
+  $('#setGroup').addEventListener('change',e=>{ CONFIG.groupBy=e.target.value;
+    Log.add('view','Группировка: '+e.target.value); save(false); });
+  $('#setSort').addEventListener('change',e=>{
+    CONFIG.sort=e.target.value;
+    CONFIG.sortDir = CONFIG.sort==='name'?'asc':'desc';
+    save();
+  });
+  $('#setDir').addEventListener('click',()=>{ CONFIG.sortDir=CONFIG.sortDir==='asc'?'desc':'asc'; save(); });
+
+  /* --- тип карточки: типовая или пользовательская --- */
+  document.querySelectorAll('[data-ctype]').forEach(b=>b.addEventListener('click',()=>{
+    CONFIG.cardType=b.dataset.ctype;
+    Log.add('view','Тип карточки: '+(CONFIG.cardType==='custom'?'пользовательская':'типовая'));
+    save();
+    if(CONFIG.cardType==='custom' && BX.ready && !state.taskFields)
+      BX.call('tasks.task.getFields',{}).then(f=>{ state.taskFields=(f&&(f.fields||f))||null;
+        Log.add('load','Поля задач получены для конструктора карточки: '
+          +Object.keys(state.taskFields||{}).length); renderRoutes(); }).catch(e=>{});
+  }));
+  const filterFields=q=>{
+    q=String(q||'').trim().toLowerCase();
+    document.querySelectorAll('[data-fname]').forEach(el=>{
+      el.style.display = !q || el.dataset.fname.toLowerCase().includes(q)
+        || el.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
+  const cfq=$('#cardFieldQ');
+  if(cfq){
+    filterFields(state.cardFieldQ);                       // поиск переживает перерисовку настроек
+    cfq.addEventListener('input',e=>{ state.cardFieldQ=e.target.value; filterFields(e.target.value); });
+  }
+  const cfc=$('#cardFieldsClear');
+  if(cfc) cfc.addEventListener('click',()=>{ CONFIG.cardFields=[]; save(); toast('Поля карточки очищены'); });
+  document.querySelectorAll('[data-cfield]').forEach(el=>el.addEventListener('change',e=>{
+    const name=el.dataset.cfield;
+    CONFIG.cardFields = e.target.checked
+      ? (CONFIG.cardFields||[]).concat(name).filter((v,i,a)=>a.indexOf(v)===i)
+      : (CONFIG.cardFields||[]).filter(v=>v!==name);
+    Store.write();
+    Log.add('view','Поле карточки '+(e.target.checked?'добавлено':'убрано')+': '+name);
+    const need = e.target.checked && TASK_SELECT_BASE.indexOf(name)<0;
+    renderRoutes();
+    if(need && BX.ready){ toast('Поле добавлено в запрос — перечитываю задачи'); refresh(); }
+  }));
+
+  /* --- высота карточки и шрифт --- */
+  const paintPreview=()=>{ ['#cardPreview','#cardPreview2'].forEach(sel=>{
+    const el=$(sel); if(el) el.innerHTML=cardPreviewHtml(); }); };
+  document.querySelectorAll('[data-hh]').forEach(b=>b.addEventListener('click',()=>{
+    CONFIG.headH = b.dataset.hh==='fix' ? (Number($('#setHeadH').value)||140) : 0;
+    applyView(); save();
+  }));
+  const hh=$('#setHeadH');
+  if(hh) hh.addEventListener('input',e=>{
+    CONFIG.headH=Number(e.target.value)||0;
+    $('#setHeadHV').textContent=CONFIG.headH+' px';
+    applyView(); paintPreview(); Store.write();
+  });
+  const cfs=$('#setCardFs');
+  if(cfs) cfs.addEventListener('input',e=>{
+    CONFIG.cardFs=Number(e.target.value)||12;
+    $('#setCardFsV').textContent=CONFIG.cardFs+' px';
+    applyView(); paintPreview(); Store.write();
+  });
+  const cff=$('#setCardFf');
+  if(cff) cff.addEventListener('change',e=>{ CONFIG.cardFf=e.target.value; applyView(); paintPreview(); Store.write();
+    Log.add('view','Шрифт карточек: '+(CARD_FONTS.find(f=>f.id===e.target.value)||{label:'по умолчанию'}).label); });
+  const cr=$('#cardReset');
+  if(cr) cr.addEventListener('click',()=>{ CONFIG.headH=0; CONFIG.cardFs=12; CONFIG.cardFf='';
+    applyView(); save(); toast('Вид карточек возвращён к исходному'); });
+  document.querySelectorAll('[data-headermode]').forEach(b=>b.addEventListener('click',()=>{
+    CONFIG.headerMode=b.dataset.headermode; save();
+  }));
+  document.querySelectorAll('[data-hmode]').forEach(b=>b.addEventListener('click',()=>{
+    CONFIG.headMode=b.dataset.hmode; syncViewToggle(); save();
+  }));
+  document.querySelectorAll('[data-field]').forEach(el=>el.addEventListener('change',e=>{
+    const id=el.dataset.field;
+    CONFIG.headFields = e.target.checked
+      ? CONFIG.headFields.concat(id).filter((v,i,a)=>a.indexOf(v)===i)
+      : CONFIG.headFields.filter(v=>v!==id);
+    save();
+  }));
+
+  document.querySelectorAll('[data-name]').forEach(el=>el.addEventListener('change',e=>{
+    const c=CATEGORIES[el.dataset.name]; if(!e.target.value.trim()) { e.target.value=c.label; return; }
+    c.label=e.target.value.trim(); save(false);
+  }));
+  document.querySelectorAll('[data-tog]').forEach(b=>b.addEventListener('click',()=>{
+    const c=CATEGORIES[b.dataset.tog], s=Number(b.dataset.stage);
+    if(c.route.includes(s)){ c.route=c.route.filter(v=>v!==s); delete c.assignees[s]; }
+    else c.route=c.route.concat(s).sort((a,b2)=>a-b2);
+    save();
+  }));
+  document.querySelectorAll('[data-asg]').forEach(sel=>sel.addEventListener('change',e=>{
+    const c=CATEGORIES[sel.dataset.asg], s=sel.dataset.stage;
+    if(e.target.value) c.assignees[s]=e.target.value; else delete c.assignees[s];
+    save(false);
+  }));
+  document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+    CATEGORIES[b.dataset.mode].mode=b.dataset.val; save();
+  }));
+  document.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
+    if(usedBy(b.dataset.del)) return;
+    if(Object.keys(CATEGORIES).length<2){ toast('Нужна хотя бы одна категория'); return; }
+    delete CATEGORIES[b.dataset.del]; save();
+  }));
+  $('#catAdd').addEventListener('click',()=>{
+    const name=prompt('Название категории проблем:'); if(!name) return;
+    let code='cat'+(Object.keys(CATEGORIES).length+1);
+    while(CATEGORIES[code]) code+='x';
+    CATEGORIES[code]={label:name.trim(), route:[1], cls:CAT_CLASSES[Object.keys(CATEGORIES).length%CAT_CLASSES.length],
+                      mode:'manual', assignees:{}};
+    save(); toast('Категория добавлена, отметьте её этапы');
+  });
+  $('#catReset').addEventListener('click',()=>{
+    if(!confirm('Вернуть четыре категории из регламента? Свои категории будут удалены.')) return;
+    CATEGORIES=JSON.parse(JSON.stringify(DEFAULT_CATS)); save(); toast('Справочник восстановлен');
+  });
+}
+
+function renderReglament(){
+  $('#app').innerHTML=`<div class="page">
+    <h1>Регламент выполнения заявки пользователей</h1>
+    <p class="lead">Заказчик приходит с проблемой, а не с задачей. Проблему нарезаем на этапы, этапы — на исполнителей. На выходе получаем конкретную задачу на конкретном исполнителе, а подзадачи двигают проблему к решению.</p>
+    <div class="sec"><h5>Этапы, результаты и нормативы</h5>
+    <table><thead><tr><th>№</th><th>Этап</th><th>Результат процесса</th><th>Норматив</th><th>Кто ведёт</th></tr></thead><tbody>
+    ${STAGES.slice(1,7).map(s=>`<tr><td class="num">${s.no}</td><td><b>${esc(s.name)}</b></td><td>${esc(s.result)}</td>
+      <td class="mono">${hours(s.normMin)} – ${hours(s.normMax)}</td><td>${esc(s.role)}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="lead" style="margin-top:10px">Норматив написания кода вчетверо больше норматива на ТЗ: чем лучше написано ТЗ, тем меньше времени уходит на кодирование. Время тестирования коррелирует со сложностью задачи.</p></div>
+
+    <div class="sec"><h5>Категория определяет маршрут</h5>
+    <table><thead><tr><th>Категория</th><th>Маршрут</th><th>Подзадачи</th></tr></thead><tbody>
+    ${Object.values(CATEGORIES).map(c=>`<tr><td><span class="chip ${c.cls}">${esc(c.label)}</span></td>
+      <td class="mono">${c.route.length?c.route.map(i=>i+' '+STAGES[i].name).join('  →  '):'—'}</td>
+      <td>${c.mode==='manual'?'вручную':'по маршруту'}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="lead" style="margin-top:10px">Справочник категорий и маршруты редактируются на вкладке «Маршруты».</p></div>
+
+    <div class="sec"><h5>Что видно по каждой подзадаче</h5>
+    <table><tbody>
+      <tr><td class="num">1</td><td>Кто делал</td></tr><tr><td class="num">2</td><td>В какие сроки сделано</td></tr>
+      <tr><td class="num">3</td><td>Когда приступил — время реакции</td></tr><tr><td class="num">4</td><td>Сколько времени делал — трудозатраты</td></tr>
+    </tbody></table></div>
+
+    <div class="sec"><h5>Затруднения внедрения и решения</h5>
+    <table><thead><tr><th>№</th><th>Затруднение</th><th>Предполагаемое решение</th></tr></thead><tbody>
+    ${ISSUES.map((r,i)=>`<tr><td class="num">${i+1}</td><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}
+    </tbody></table></div>
+  </div>`;
+}
+function renderTeam(){
+  $('#app').innerHTML=`<div class="page">
+    <h1>Структура отдела разработки 1С</h1>
+    <p class="lead">Этап закреплён за ролью: при создании подзадачи по стадии исполнитель подставляется автоматически.</p>
+    <div class="grid">${TEAM.map(t=>`<div class="person">
+      ${t.lvl?`<span class="lvl">${t.lvl}</span>`:''}
+      <div class="role">${esc(t.role)}</div><b>${esc(t.name)}</b>
+      <ul>${t.duties.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>
+      ${t.stages.length?`<div style="margin-top:9px;font-size:11px;color:var(--ink-2)">Этапы: <span class="mono">${t.stages.map(s=>STAGES[s].no).join(', ')}</span></div>`:''}
+    </div>`).join('')}</div></div>`;
+}
+
+/* =====================  СТАРТ  ===================== */
+function render(){
+  if(state.view==='board') renderBoard();
+  else if(state.view==='routes') renderRoutes();
+  else if(state.view==='reglament') renderReglament();
+  else renderTeam();
+}
+
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected','false'));
+  b.setAttribute('aria-selected','true'); state.view=b.dataset.view;
+  Log.add('view','Открыт раздел: '+b.textContent.trim());
+  render();
+}));
+function syncViewToggle(){ $('#viewToggle').textContent = CONFIG.headMode==='compact'?'Развернуть строки':'Свернуть строки'; }
+$('#viewToggle').addEventListener('click',()=>{
+  CONFIG.headMode = CONFIG.headMode==='compact'?'full':'compact';
+  Store.write(); syncViewToggle(); state.view='board'; render();
+});
+async function refresh(){
+  if(!BX.ready){ render(); toast('Демо-режим: данные локальные'); return; }
+  const btn=$('#refreshBtn'); btn.disabled=true; btn.textContent='Обновляю…';
+  Progress.start('Обновление доски');
+  Progress.step('Отбор: '+filterText());
+  state.spCache={}; state.sprintsFor={};        // по кнопке перечитываем всё заново
+  state.spProbed=false; state.scrumListDead=false;   // и заново ищем, где лежат оценки
+  Progress.step('Кэш оценок и спринтов сброшен — читаю портал заново');
+  try{
+    await loadPortal(); state.live=true;
+    Progress.step('Пересобираю списки сотрудников и спринтов');
+    fillUsers(); fillSprints();
+    Progress.step('Рисую доску: заявок '+state.problems.length
+      +', подзадач '+state.problems.reduce((a,p)=>a+p.subs.length,0));
+    render();
+    Progress.done('заявок '+state.problems.length);
+    toast('Обновлено: заявок '+state.problems.length);
+  }catch(e){
+    Progress.fail(e.message);
+    Log.add('error','Обновление не удалось: '+e.message);
+    toast('Битрикс24: '+e.message);
+  }finally{ btn.disabled=false; btn.textContent='Обновить'; }
+}
+$('#refreshBtn').addEventListener('click',()=>{ Log.add('view','Нажато «Обновить»'); refresh(); });
+$('#listBtn').addEventListener('click',()=>openTaskList());
+$('#sprintBtn').addEventListener('click',()=>{ Log.add('view','Нажато «Добавить задачи в спринт»'); openSprintIntake(); });
+syncViewToggle();
+$('#q').addEventListener('input',e=>{state.q=e.target.value;if(state.view==='board')renderBoard();});
+function fillProjects(){
+  $('#fProject').innerHTML='<option value="">Все проекты</option>'
+    +state.projects.map(g=>`<option value="${esc(g.id)}" ${String(g.id)===String(state.group)?'selected':''}>${esc(g.name)}</option>`).join('');
+}
+function fillSprints(){
+  const sel=$('#fSprint');
+  const list=state.sprints.filter(s=>!state.group||String(s.groupId)===String(state.group));
+  if(state.sprint && state.sprint!=='__backlog' && !list.some(s=>String(s.id)===String(state.sprint))) state.sprint='';
+  const label=s=>s.name+(s.from?' · '+s.from+'–'+s.to:'')+(s.status==='active'?' · активный':'');
+  const hint = (!list.length && state.sprintState==='loading') ? '<option value="" disabled>загрузка спринтов…</option>'
+    : state.sprintState==='error' ? '<option value="" disabled>спринты недоступны на портале</option>'
+    : (!list.length ? `<option value="" disabled>${!state.group?'выберите проект, чтобы увидеть спринты'
+        :(isScrum(state.group)===false?'это обычная группа, спринтов нет':'у проекта нет спринтов')}</option>` : '');
+  sel.innerHTML='<option value="" '+(state.sprint?'':'selected')+'>Все спринты</option>'
+    +'<option value="__backlog" '+(state.sprint==='__backlog'?'selected':'')+'>Бэклог, вне спринта</option>'
+    +list.map(s=>`<option value="${esc(s.id)}" ${String(s.id)===String(state.sprint)?'selected':''}>${esc(label(s))}</option>`).join('')
+    +hint;
+  sel.disabled=false;   // отбор по бэклогу должен работать всегда
+}
+fillProjects(); fillSprints();
+
+$('#fProject').addEventListener('change',async e=>{
+  state.group=e.target.value; state.sprint='';
+  Prefs.write();
+  Log.add('filter','Выбран проект: '+(state.group?projectName(state.group):'все проекты'));
+  if(BX.ready){
+    CONFIG.groupId=state.group?Number(state.group):0;
+    state.sprintState=state.group?'loading':'ok';
+    fillSprints();
+    $('#mode').textContent='загрузка проекта…';
+    try{ await loadPortal(); }
+    catch(err){ toast('Битрикс24: '+err.message); $('#mode').textContent='ошибка загрузки задач'; }
+  }
+  fillSprints(); state.view='board'; render();
+});
+$('#fSprint').addEventListener('change',async e=>{
+  state.sprint=e.target.value; Prefs.write();
+  Log.add('filter','Выбран спринт: '+(state.sprint?(state.sprint==='__backlog'?'бэклог':sprintName(state.sprint)):'все спринты'));
+  if(BX.ready && state.sprint && state.sprint!=='__backlog'){
+    try{ await loadPortal(); fillUsers(); }catch(err){ Log.add('error','Догрузка по спринту не удалась: '+err.message); }
+  }
+  state.view='board'; render();
+});
+
+function fillUsers(){
+  $('#fUser').innerHTML='<option value="">Все исполнители</option>'
+    +roster().map(t=>`<option value="${t.id}" ${t.id===state.user?'selected':''}>${esc(t.name)}</option>`).join('');
+}
+fillUsers();
+$('#fUser').addEventListener('change',e=>{state.user=e.target.value;Prefs.write();
+  Log.add('filter','Отбор по исполнителю: '+(state.user?person(state.user).name:'все'));
+  if(state.view==='board')renderBoard();});
+$('#addBtn').addEventListener('click',async()=>{
+  const title=prompt('Проблема словами заказчика:'); if(!title) return;
+  const id='P-'+Math.floor(100+Math.random()*899);
+  const pr={id,bxId:null,tags:[],title,cat:'new',subs:[],chat:[['Постановщик',title]],checks:{},merged:false,
+            createdAt:Date.now(), groupId:state.group||'', sprintId:(state.sprint&&state.sprint!=='__backlog')?state.sprint:''};
+  state.problems.unshift(pr);
+  if(state.live){
+    try{
+      const fields={TITLE:title, RESPONSIBLE_ID:Number(state.map.galkina)||1,
+        XML_ID:BX.buildXmlId('',{stage:0,cat:pr.cat})};
+      if(state.group) fields.GROUP_ID=Number(state.group);
+      else if(CONFIG.groupId) fields.GROUP_ID=Number(CONFIG.groupId);
+      if(state.sprint && state.sprint!=='__backlog') fields.SPRINT_ID=Number(state.sprint);
+      const r=await BX.call('tasks.task.add',{fields});
+      pr.bxId=r.task.id; pr.xmlId=fields.XML_ID;
+    }catch(e){ toast('Битрикс24: '+e.message); }
+  }
+  if(autoMode(pr)){
+    if(CONFIG.createOnIntake==='all') await ensureRoute(id,true);
+    else await addSub(id, routeOf(pr)[0], null, true);
+  }
+  Log.add('task','Принята заявка «'+title+'»', {проблема:id, задача:pr.bxId||'',
+          проект:projectName(pr.groupId), спринт:pr.sprintId?sprintName(pr.sprintId):'бэклог'});
+  state.view='board'; render();
+  toast(pr.subs.length?'Заявка принята: '+id+' · подзадача на '+person(pr.subs[0].who).name
+                      :'Заявка принята: '+id+' · подзадачи создаются вручную');
+});
+
+/* сборка заявок и подзадач из плоского ответа портала */
+function buildProblems(raw){
+  const users={};
+  raw.forEach(t=>{
+    const r=t.responsible;
+    if(r&&r.id) users['u'+r.id]={id:'u'+r.id, bxId:String(r.id), name:r.name||('Сотрудник #'+r.id),
+                                 role:r.workPosition||'', stages:[], duties:[]};
+  });
+  state.users=Object.values(users).sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+  state.users.forEach(u=>{ state.map[u.id]=u.bxId; });
+
+  const ts=v=>{ const d=new Date(v); return isNaN(d)?Date.now():d.getTime(); };
+  const ids=new Set(raw.map(t=>String(t.id)));
+  /* задача-сирота: её родитель не попал в выборку — показываем её как самостоятельную заявку */
+  const parents=raw.filter(t=>BX.num(t.parentId)===0 || !ids.has(String(t.parentId)));
+  const kids=raw.filter(t=>BX.num(t.parentId)>0 && ids.has(String(t.parentId)));
+
+  state.problems=parents.map(t=>{
+    const subs=kids.filter(k=>String(k.parentId)===String(t.id)).map(k=>({
+      sid:'b'+k.id, bxId:k.id, xmlId:k.xmlId||'',
+      stage:BX.stageOf(k)||1,
+      title:k.title,
+      who:k.responsible&&k.responsible.id?('u'+k.responsible.id):'',
+      status:BX.status(k.status),
+      reactionMin:null,
+      sprintId:k.sprintId?String(k.sprintId):'',
+      sp:BX.marker(k).sp||0, pct:BX.marker(k).pct,
+      spentH:BX.num(k.timeSpentInLogs)/3600,
+      createdAt:ts(k.createdDate),
+      touchedAt:ts(k.activityDate||k.changedDate||k.createdDate)
+    }));
+    const mk=BX.marker(t);
+    const ownSprint = t.sprintId?String(t.sprintId):'';
+    const kidSprint = (subs.find(s=>s.sprintId)||{}).sprintId||'';
+    return {raw:t, id:'#'+t.id, bxId:t.id, xmlId:t.xmlId||'', title:t.title, cat:BX.catOf(t),
+            sp:mk.sp||0, pct:mk.pct,
+            groupId:t.groupId?String(t.groupId):'', sprintId:ownSprint||kidSprint,
+            subs, chat:[], checks:{}, merged:false,
+            createdAt:ts(t.createdDate), touchedAt:ts(t.activityDate||t.changedDate||t.createdDate)};
+  });
+  return parents.filter(t=>BX.num(t.parentId)>0).length;
+}
+
+/* загрузка задач проекта: родители и подзадачи разбираются из одного ответа */
+async function loadPortal(){
+  const t0=Date.now();
+  if(!Progress.on) Progress.start('Загрузка задач портала');
+  const gFilter={}; if(state.group) gFilter.GROUP_ID=Number(state.group);
+  Progress.step('Запрашиваю задачи: '+(state.group?projectName(state.group):'все проекты'));
+
+  /* спринты запрашиваем параллельно с задачами и кэшируем: повторный вход в проект их не перезапрашивает */
+  state.sprintsFor=state.sprintsFor||{};
+  const needSprints = state.group && !state.sprintsFor[state.group];
+  if(state.group) state.sprintState=needSprints?'loading':'ok';
+  const sprintsPromise = needSprints
+    ? BX.loadSprints(state.group).catch(e=>{ Log.add('error','Спринты не получены: '+e.message); return null; })
+    : Promise.resolve(null);
+
+  /* первая страница задач рисуется сразу, остальные догружаются следом */
+  let painted=false;
+  const paintEarly=(arr)=>{
+    if(painted) return; painted=true;
+    buildProblems(arr);
+    state.loading=false; state.live=true;
+    fillUsers(); render();
+    $('#mode').textContent='загружаю остальные страницы…';
+  };
+
+  if(needSprints) Progress.step('Параллельно запрашиваю спринты проекта');
+  const [raw0] = await Promise.all([
+    BX.loadTasks(gFilter, state.group?('проект '+state.group):'все проекты', paintEarly),
+    sprintsPromise.then(list=>{
+      if(list){
+        state.sprints=state.sprints.filter(s=>String(s.groupId)!==String(state.group)).concat(list);
+        state.sprintsFor[state.group]=Date.now();
+        state.sprintState='ok';
+      }else if(needSprints){ state.sprintState='error'; }
+      fillSprints();
+      return list;
+    })
+  ]);
+  let raw=raw0;
+  const loadMain=BX.lastLoad||{};
+  Progress.step('Задачи получены: '+raw.length+' шт., страниц '+(loadMain.pages||1));
+
+  /* добор по спринту: задача может лежать вне выбранного проекта или не поместиться в выборку */
+  let addedBySprint=0;
+  if(state.sprint && state.sprint!=='__backlog'){
+    Progress.step('Добираю задачи выбранного спринта');
+    try{
+      const bySprint=await BX.loadTasks({SPRINT_ID:Number(state.sprint)}, 'спринт '+state.sprint);
+      const have=new Set(raw.map(x=>String(x.id)));
+      bySprint.forEach(x=>{ if(!have.has(String(x.id))){ raw.push(x); have.add(String(x.id)); addedBySprint++; } });
+      Log.add('load','Добор по спринту: найдено '+bySprint.length+', добавлено новых '+addedBySprint,
+              {'ID спринта':state.sprint});
+    }catch(e){ Log.add('error','Добор по спринту не удался: '+e.message); }
+  }
+
+  /* родители задач-сирот: тянем их отдельно, чтобы подзадачи встали в свои заявки */
+  const known=new Set(raw.map(x=>String(x.id)));
+  const missingParents=[...new Set(raw.map(x=>String(x.parentId||'0'))
+    .filter(pid=>pid!=='0' && !known.has(pid)))];
+  if(missingParents.length){
+    Progress.step('Догружаю родителей задач-сирот: '+missingParents.length);
+    let par=[];
+    try{
+      par=await BX.loadTasks({ID:missingParents.slice(0,50)}, 'родители сирот');
+    }catch(e){
+      Log.add('probe','Фильтр по списку ID не принят ('+e.message+') — беру родителей пакетом');
+      const ids=missingParents.slice(0,50), cmds={};
+      ids.forEach(pid=>{ cmds['p'+pid]=['tasks.task.get',{taskId:Number(pid), select:taskSelect()}]; });
+      try{
+        const part=await BX.callBatch(cmds);
+        Object.values(part).forEach(v=>{ if(v&&v.task) par.push(v.task); });
+      }catch(err){ Log.add('error','Родителей получить не удалось: '+err.message); }
+    }
+    par.forEach(x=>{ if(!known.has(String(x.id))){ raw.push(x); known.add(String(x.id)); } });
+    Log.add('load','Догружены родители сирот: запрошено '+missingParents.length+', получено '+par.length);
+  }
+
+  Progress.step('Собираю заявки и подзадачи из '+raw.length+' задач');
+  const orphans=buildProblems(raw);
+  Progress.step('Собрано: заявок '+state.problems.length
+    +', подзадач '+state.problems.reduce((a,p)=>a+p.subs.length,0)+', сотрудников '+state.users.length);
+
+  /* Сторипоинты грузим ФОНОМ: доска уже нарисована, числа появятся через секунду. */
+  (async()=>{
+    Progress.step('Сторипоинты подтягиваются фоном, доска уже работает');
+    if(CONFIG.spSourceAuto && CONFIG.spSource==='marker' && !state.spProbed){
+      state.spProbed=true;
+      const hasMarker=state.problems.some(p=>p.sp || p.subs.some(s=>s.sp));
+      if(!hasMarker){
+        /* пробуем на осмысленной выборке: сперва задачи, стоящие в спринте, — оценки живут там */
+        const probeIds=[], push=v=>{ if(v && probeIds.indexOf(String(v))<0) probeIds.push(String(v)); };
+        state.problems.forEach(p=>{ if(p.sprintId){ push(p.bxId); p.subs.forEach(x=>push(x.bxId)); } });
+        state.problems.forEach(p=>{ push(p.bxId); p.subs.forEach(x=>push(x.bxId)); });
+        try{
+          const pts=await BX.loadScrumPoints(probeIds.slice(0,50));
+          if(Object.keys(pts).length){
+            CONFIG.spSource='scrum'; Store.write();
+            Log.add('load','Сторипоинты найдены в скрам-задачах ('+Object.keys(pts).length
+              +' из '+Math.min(50,probeIds.length)+' проверенных) — источник переключён на scrum');
+          }else Log.add('load','Сторипоинты не найдены ни в метке, ни в скрам-задачах: проверено '
+              +Math.min(50,probeIds.length)+' задач');
+        }catch(e){ Log.add('probe','Проверка сторипоинтов скрама не удалась: '+e.message); }
+      }
+    }
+    if(CONFIG.spSource!=='scrum') return;
+    const ids=[]; state.problems.forEach(p=>{ if(p.bxId) ids.push(String(p.bxId));
+                                              p.subs.forEach(s=>{ if(s.bxId) ids.push(String(s.bxId)); }); });
+    try{
+      const pts=await BX.loadScrumPoints(ids);
+      let hit=0;
+      state.problems.forEach(p=>{
+        if(pts[String(p.bxId)]){ p.sp=pts[String(p.bxId)]; hit++; }
+        p.subs.forEach(s=>{ if(pts[String(s.bxId)]){ s.sp=pts[String(s.bxId)]; hit++; } });
+      });
+      Log.add('load','Сторипоинты проставлены фоном: '+hit+' задач');
+      if(hit && state.view==='board') renderBoard();
+    }catch(e){ Log.add('error','Сторипоинты не получены: '+e.message); }
+  })();
+
+  const bySprintCount={};
+  state.problems.forEach(p=>{ const k=p.sprintId||'бэклог'; bySprintCount[k]=(bySprintCount[k]||0)+1; });
+  Log.add('load','Загружены задачи портала: '+state.problems.length+' заявок, '
+    +state.problems.reduce((a,p)=>a+p.subs.length,0)+' подзадач',
+    {проект:state.group?projectName(state.group):'все', сотрудников:state.users.length,
+     'сырых задач':raw.length, 'получено по проекту':loadMain.got,
+     'портал сообщает всего':loadMain.total==null?'—':loadMain.total,
+     страниц:loadMain.pages, 'добрано по спринту':addedBySprint,
+     'сирот поднято':orphans, 'со спринтом':state.problems.filter(p=>p.sprintId).length});
+  Log.add('load','Раскладка по спринтам: '+Object.entries(bySprintCount)
+    .map(([k,v])=>(k==='бэклог'?k:sprintName(k))+': '+v).join(', '));
+  if(loadMain.total!=null && loadMain.got<loadMain.total)
+    Log.add('error','Загружены не все задачи проекта: '+loadMain.got+' из '+loadMain.total);
+  if(state.sprint && state.sprint!=='__backlog'){
+    const inSp=state.problems.filter(p=>inSprint(p,state.sprint));
+    Log.add('load','В выбранном спринте: '+inSp.length+' заявок',
+      {спринт:sprintName(state.sprint),
+       'из них по своей метке':inSp.filter(p=>String(p.sprintId)===String(state.sprint)).length,
+       'из них через подзадачу':inSp.filter(p=>String(p.sprintId)!==String(state.sprint)).length});
+  }
+  Log.add('load','Загрузка проекта заняла '+(Math.round((Date.now()-t0)/100)/10)+' с');
+  Progress.step('Загрузка портала завершена за '+(Math.round((Date.now()-t0)/100)/10)+' с');
+  $('#mode').textContent='портал · задач: '+state.problems.length
+    +(state.group?' · '+projectName(state.group):'')
+    +' · сотрудников: '+state.users.length;
+  $('#mode').style.borderStyle='solid';
+  Progress.modeWas=$('#mode').textContent;      // итоговую строку состояния и вернём после прогресса
+}
+
+function boot(){
+  Store.apply();
+  applyColors();
+  applyView();
+  syncTopGap();
+  Prefs.apply();
+  Log.load();
+  const b=document.getElementById('brand');
+  if(b) b.title='Версия сборки '+APP_VERSION;
+  Log.add('load','Приложение открыто, версия сборки '+APP_VERSION);
+
+  /* мгновенно показываем интерфейс: проекты из кэша, доска с индикатором загрузки */
+  const cached=ProjCache.read();
+  if(cached) state.projects=cached;
+  if(window.BX24 && !window.__bxFail){
+    state.loading=true; state.problems=[];
+    fillProjects(); fillUsers(); fillSprints();
+    $('#mode').textContent='подключаюсь к порталу…';
+    render();
+  }
+
+  if(window.BX24 && !window.__bxFail){
+    BX24.init(async()=>{
+      BX.ready=true;
+      const t0=Date.now();
+      /* поля, пользователь и проекты — одним пакетным запросом вместо четырёх подряд */
+      try{
+        const b=await BX.bootData();
+        if(b.me && b.me.ID) state.me={id:'u'+b.me.ID, bxId:String(b.me.ID),
+          name:[b.me.NAME,b.me.LAST_NAME].filter(Boolean).join(' ')||('Сотрудник #'+b.me.ID),
+          role:b.me.WORK_POSITION||'', stages:[], duties:[]};
+        if(b.fields) state.taskFields=b.fields;      // список полей для конструктора карточки
+        if(b.projects && b.projects.length){ state.projects=b.projects; ProjCache.write(b.projects); }
+        if(b.fields && (!CONFIG.pctField || !CONFIG.spField)){
+          const found={};
+          Object.entries(b.fields).forEach(([name,d])=>{
+            if(!/^UF_/.test(name)) return;
+            const title=String((d&&d.title)||'').toLowerCase();
+            if(!found.pct && /процент|percent|готовн/.test(title)) found.pct=name;
+            if(!found.sp && /стори|story|поинт|point|оценк/.test(title)) found.sp=name;
+          });
+          if(!CONFIG.pctField && found.pct){ CONFIG.pctField=found.pct; Store.write();
+            Log.add('load','Подобрано поле процента готовности: '+found.pct); }
+          if(!CONFIG.spField && found.sp && CONFIG.spSource==='field'){ CONFIG.spField=found.sp; Store.write();
+            Log.add('load','Подобрано поле сторипоинтов: '+found.sp); }
+        }
+        Log.add('load','Стартовый пакет получен за '+(Date.now()-t0)+' мс');
+      }catch(e){
+        Log.add('error','Стартовый пакет не получен: '+e.message+' — беру данные по одному');
+        try{ const projects=await BX.loadProjects(); if(projects.length){ state.projects=projects; ProjCache.write(projects); } }catch(err){}
+        try{ const me=await BX.call('user.current',{});
+             if(me&&me.ID) state.me={id:'u'+me.ID, bxId:String(me.ID),
+               name:[me.NAME,me.LAST_NAME].filter(Boolean).join(' '), role:me.WORK_POSITION||'', stages:[], duties:[]};
+        }catch(err){}
+      }
+
+      if(!state.group && CONFIG.groupId) state.group=String(CONFIG.groupId);
+      if(state.group && !state.projects.some(g=>String(g.id)===String(state.group))) state.group='';
+      CONFIG.groupId=state.group?Number(state.group):CONFIG.groupId;
+      fillProjects();
+      state.sprintState=state.group?'loading':'ok';
+      fillSprints();
+      $('#mode').textContent='загружаю задачи…';
+
+      try{
+        await loadPortal();
+        state.live=true;
+      }catch(e){ console.error('[задачи]',e); Log.add('error','Не удалось загрузить задачи: '+e.message);
+        $('#mode').textContent='нет доступа к задачам: '+e.message; }
+      state.loading=false;
+      fillUsers(); fillSprints();
+      render();
+      Log.add('load','Приложение готово за '+(Math.round((Date.now()-t0)/100)/10)+' с');
+      BX24.fitWindow && BX24.fitWindow();
+    });
+  }else{
+    state.loading=false;
+    if(state.group && !state.projects.some(g=>String(g.id)===String(state.group))) state.group='';
+    fillProjects(); fillUsers(); fillSprints();
+    $('#mode').textContent='демо-режим, вне портала';
+    render();
+  }
+}
+boot();
+</script>
+</body>
+</html>

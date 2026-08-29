@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Установка — Маршрут проблемы</title>
+<style>
+body{font-family:"Segoe UI",Roboto,Arial,sans-serif;background:#F7F4EC;color:#1E1B16;
+     display:grid;place-items:center;height:100vh;margin:0;text-align:center}
+.box{background:#FFFDF7;border:1px solid #DCD5C3;border-radius:12px;padding:28px 34px;max-width:420px}
+h1{font-size:17px;margin:0 0 8px}
+p{font-size:13px;color:#5C5648;margin:0}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Маршрут проблемы установлен</h1>
+  <p id="s">Завершаем установку…</p>
+</div>
+<script src="//api.bitrix24.com/api/v1/"></script>
+<script>
+  BX24.init(function(){
+    BX24.installFinish();
+    document.getElementById('s').textContent =
+      'Готово. Приложение доступно в левом меню портала.';
+  });
+</script>
+</body>
+</html>

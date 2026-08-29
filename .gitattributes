@@ -1,0 +1,7 @@
+# файлы приложения публикуются как есть, без подмены переводов строк
+* text=auto
+*.html text eol=lf
+*.yml  text eol=lf
+# скрипты для Windows должны остаться с CRLF
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
