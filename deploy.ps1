@@ -12,6 +12,14 @@
 param([string]$Message = "")
 
 $ErrorActionPreference = "Stop"
+
+# Консоль Windows по умолчанию не в UTF-8: при вводе кириллицы теряются отдельные буквы,
+# а вывод превращается в мусор. Переключаем на время работы скрипта.
+try {
+    [Console]::InputEncoding  = [Text.Encoding]::UTF8
+    [Console]::OutputEncoding = [Text.Encoding]::UTF8
+} catch {}
+
 $root = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $root
 
